@@ -30,32 +30,13 @@ OPENAI_API_KEY=your_openai_key_here
 GROQ_API_KEY=your_groq_key_here
 ```
 
-### 2. Docker Setup (Recommended)
+### 2. Docker Setup
 
 ```bash
 # Build and start
 docker-compose up --build
 
 # API will be available at http://localhost:8000
-```
-
-### 3. Local Setup
-
-```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Build FAISS index (first time only)
-python main.py
-
-# Start API server
-python api.py
-# or
-uvicorn api:app --reload
 ```
 
 ## Usage
@@ -125,12 +106,12 @@ black src/ api.py main.py tests/
 
 Default settings in `src/config.py`:
 
-- Chunk size: 600 characters
-- Chunk overlap: 100 characters
-- Embedding model: text-embedding-3-small
-- Top-k results: 5
-- Candidate-k for reranking: 25
-- Temperature: 0
+- **Chunk size: 1000 characters** (~150 tokens) - Balances context preservation with retrieval precision. Large enough to capture complete concepts in technical documentation while small enough for focused retrieval.
+- **Chunk overlap: 150 characters** (15%) - Ensures critical information spanning chunk boundaries isn't lost, maintaining continuity across splits.
+- **Top-k: 5** - Provides sufficient context diversity without overwhelming the LLM. After reranking from 30 FAISS candidates, top 5 ensures quality over quantity.
+- **Candidate-k: 30** - Initial FAISS retrieval pool for LLM reranking. Large enough to capture diverse relevant passages while keeping reranking latency manageable (~2-3s).
+- **Embedding: text-embedding-3-small** - OpenAI's cost-effective model (1536-dim) with strong semantic understanding. Balances performance and affordability for technical document retrieval.
+- **Temperature: 0** - Ensures deterministic, factual outputs critical for technical/regulatory documentation. Eliminates hallucination risk in safety-critical domain.
 
 ## Technologies
 
@@ -144,38 +125,3 @@ Default settings in `src/config.py`:
 - Pydantic - Data validation
 - Docker - Containerization
 - Pytest - Testing
-
-## Docker Commands
-
-```bash
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Rebuild
-docker-compose build --no-cache
-```
-
-## Troubleshooting
-
-### FAISS Index Not Found
-
-```bash
-python main.py  # Build the index
-```
-
-### Port Already in Use
-
-```bash
-# Change port in docker-compose.yml or run:
-uvicorn api:app --port 8001
-```
-
-## License
-
-This project is for internal use only.

@@ -101,7 +101,6 @@ Visit http://localhost:8000/docs for interactive API documentation.
 ├── api.py                   # FastAPI application
 ├── main.py                  # Index builder
 ├── example.py               # Usage example
-├── regenerate_images.py     # Image regeneration utility
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -117,10 +116,10 @@ pytest
 pytest --cov=src --cov-report=html
 
 # Lint code
-flake8 src/ api.py main.py regenerate_images.py tests/
+flake8 src/ api.py main.py tests/
 
 # Format code
-black src/ api.py main.py regenerate_images.py tests/
+black src/ api.py main.py tests/
 ```
 
 ## Configuration
@@ -169,12 +168,6 @@ docker-compose build --no-cache
 
 ```bash
 python main.py  # Build the index
-```
-
-### Missing Images
-
-```bash
-python regenerate_images.py  # Regenerate all images
 ```
 
 ### Port Already in Use

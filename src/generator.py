@@ -2,10 +2,11 @@
 
 import json
 import logging
+import time
 from groq import Groq
 
 from .models import AnswerResponse
-from .config import TEMPERATURE
+from .config import TEMPERATURE, API_TIMEOUT_MS, API_MAX_RETRIES
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ SYSTEM_PROMPT = """
     - "steps" must be actionable.
     - "verification" must reference how the pages support the answer.
     - Use ONLY the provided context. No hallucinations.
-    - If the context is not relevant to the question, indicate that no relevant information was found.
+    - If the context is not relevant to the question, indicate that no relevant
+      information was found.
 """
 
 
@@ -46,7 +48,9 @@ class AnswerGenerator:
 
     def __init__(self):
         try:
-            self.groq_client = Groq()
+            self.groq_client = Groq(
+                timeout=API_TIMEOUT_MS / 1000
+            )  # Convert ms to seconds
             logger.info("AnswerGenerator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AnswerGenerator: {e}")
@@ -127,19 +131,37 @@ MEDIA:
 {media_files}
 """
 
-            # Call Groq API
-            try:
-                completion = self.groq_client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    temperature=TEMPERATURE,
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                )
-            except Exception as e:
-                logger.error(f"Groq API call failed: {e}")
-                raise Exception(f"Failed to call Groq API: {str(e)}")
+            # Call Groq API with retry logic
+            completion = None
+            last_error = None
+
+            for attempt in range(API_MAX_RETRIES + 1):
+                try:
+                    completion = self.groq_client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        temperature=TEMPERATURE,
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                    )
+                    break  # Success, exit retry loop
+
+                except Exception as e:
+                    last_error = e
+                    if attempt < API_MAX_RETRIES:
+                        wait_time = 2**attempt  # Exponential backoff: 1s, 2s
+                        logger.warning(
+                            f"Groq API call failed "
+                            f"(attempt {attempt + 1}/{API_MAX_RETRIES + 1}): {e}. "
+                            f"Retrying in {wait_time}s..."
+                        )
+                        time.sleep(wait_time)
+                    else:
+                        logger.error(
+                            f"Groq API call failed after {API_MAX_RETRIES + 1} attempts: {e}"
+                        )
+                        raise Exception(f"Failed to call Groq API: {str(last_error)}")
 
             raw_output = completion.choices[0].message.content
             logger.debug(f"Raw LLM output: {raw_output[:200]}...")

@@ -1,12 +1,13 @@
 """Retrieval and reranking - copied exactly from RAG.py"""
 
 import logging
+import time
 from groq import Groq
 
 from .embeddings import EmbeddingManager
 from .utils import context_is_relevant
 from .pdf_processor import PDFProcessor
-from .config import TOP_K, CANDIDATE_K, TEMPERATURE
+from .config import TOP_K, CANDIDATE_K, TEMPERATURE, API_TIMEOUT_MS, API_MAX_RETRIES
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,9 @@ class Retriever:
 
     def __init__(self):
         try:
-            self.groq_client = Groq()
+            self.groq_client = Groq(
+                timeout=API_TIMEOUT_MS / 1000
+            )  # Convert ms to seconds
             self.embedding_manager = EmbeddingManager()
             logger.info("Retriever initialized successfully")
         except Exception as e:
@@ -61,24 +64,41 @@ class Retriever:
                     A score of 0 means "irrelevant".
                 """
 
-                try:
-                    response = self.groq_client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=TEMPERATURE,
-                    )
-
+                # Retry logic for API calls
+                score = 0.0
+                for attempt in range(API_MAX_RETRIES + 1):
                     try:
-                        score = float(response.choices[0].message.content.strip())
-                    except (ValueError, AttributeError) as e:
-                        logger.warning(f"Failed to parse score for chunk {i}: {e}")
-                        score = 0.0
+                        response = self.groq_client.chat.completions.create(
+                            model="llama-3.1-8b-instant",
+                            messages=[{"role": "user", "content": prompt}],
+                            temperature=TEMPERATURE,
+                        )
 
-                    scored.append((score, r))
+                        try:
+                            score = float(response.choices[0].message.content.strip())
+                        except (ValueError, AttributeError) as e:
+                            logger.warning(f"Failed to parse score for chunk {i}: {e}")
+                            score = 0.0
 
-                except Exception as e:
-                    logger.error(f"Groq API call failed for chunk {i}: {e}")
-                    scored.append((0.0, r))
+                        break  # Success, exit retry loop
+
+                    except Exception as e:
+                        if attempt < API_MAX_RETRIES:
+                            wait_time = 2**attempt  # Exponential backoff: 1s, 2s
+                            logger.warning(
+                                f"Groq API call failed for chunk {i} "
+                                f"(attempt {attempt + 1}/{API_MAX_RETRIES + 1}): {e}. "
+                                f"Retrying in {wait_time}s..."
+                            )
+                            time.sleep(wait_time)
+                        else:
+                            logger.error(
+                                f"Groq API call failed for chunk {i} after "
+                                f"{API_MAX_RETRIES + 1} attempts: {e}"
+                            )
+                            score = 0.0
+
+                scored.append((score, r))
 
             # Sort high → low
             scored.sort(key=lambda x: x[0], reverse=True)

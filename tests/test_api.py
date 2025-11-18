@@ -45,6 +45,7 @@ def test_chat_answer_endpoint_success(mock_generate, mock_retrieve):
         ),
         links=["/media/page_1.png"],
         media=Media(images=["Diagram 1.1"]),
+        latency_ms=100,
     )
     mock_generate.return_value = mock_response
 
@@ -57,6 +58,8 @@ def test_chat_answer_endpoint_success(mock_generate, mock_retrieve):
     data = response.json()
     assert data["mode"] == "answer"
     assert "answer" in data
+    assert "latency_ms" in data
+    assert isinstance(data["latency_ms"], int)
 
 
 @patch("api.retriever.retrieve_with_reranking")
@@ -70,6 +73,8 @@ def test_chat_answer_endpoint_no_context(mock_retrieve):
     assert response.status_code == 200
     data = response.json()
     assert data["answer"]["title"] == "No Information Found"
+    assert "latency_ms" in data
+    assert isinstance(data["latency_ms"], int)
 
 
 def test_chat_answer_missing_question():

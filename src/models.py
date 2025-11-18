@@ -20,3 +20,4 @@ class AnswerResponse(BaseModel):
     answer: AnswerContent
     links: List[str]
     media: Media
+    latency_ms: int = 0

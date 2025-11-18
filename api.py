@@ -3,6 +3,7 @@ FastAPI application for RAG system
 """
 
 import logging
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -62,6 +63,8 @@ def answer_endpoint(request: QueryRequest):
     Raises:
         HTTPException: If processing fails
     """
+    start_time = time.time()
+
     try:
         # Validate input
         if not request.question or not request.question.strip():
@@ -70,6 +73,7 @@ def answer_endpoint(request: QueryRequest):
         logger.info(f"Processing query: {request.question[:100]}...")
 
         # Retrieve and rerank
+        retrieval_start = time.time()
         try:
             context, pages, media_files = retriever.retrieve_with_reranking(
                 request.question
@@ -79,10 +83,14 @@ def answer_endpoint(request: QueryRequest):
             raise HTTPException(
                 status_code=500, detail=f"Failed to retrieve context: {str(e)}"
             )
+        retrieval_time = (time.time() - retrieval_start) * 1000  # Convert to ms
 
         # Check if no relevant context found
         if context is None:
-            logger.info("No relevant context found")
+            total_latency = int((time.time() - start_time) * 1000)
+            logger.info(
+                f"No relevant context found - Retrieval: {retrieval_time:.2f}ms, Total: {total_latency}ms"
+            )
             return AnswerResponse(
                 mode="answer",
                 answer=AnswerContent(
@@ -93,20 +101,34 @@ def answer_endpoint(request: QueryRequest):
                 ),
                 links=[],
                 media=Media(images=[]),
+                latency_ms=total_latency,
             )
 
         # Generate answer
+        generation_start = time.time()
         try:
             result = generator.generate_structured_answer(
                 request.question, context, pages, media_files
             )
-            logger.info("Answer generated successfully")
-            return result
         except Exception as e:
             logger.error(f"Answer generation failed: {e}")
             raise HTTPException(
                 status_code=500, detail=f"Failed to generate answer: {str(e)}"
             )
+        generation_time = (time.time() - generation_start) * 1000  # Convert to ms
+
+        # Calculate total latency
+        total_latency = int((time.time() - start_time) * 1000)
+
+        # Log timing breakdown
+        logger.info(
+            f"Request completed - Retrieval: {retrieval_time:.2f}ms, "
+            f"Generation: {generation_time:.2f}ms, Total: {total_latency}ms"
+        )
+
+        # Add latency to response
+        result.latency_ms = total_latency
+        return result
 
     except HTTPException:
         raise

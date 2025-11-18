@@ -31,9 +31,11 @@ def test_answer_response_valid():
         ),
         links=["/media/page_1.png"],
         media=Media(images=["diagram.png"]),
+        latency_ms=150,
     )
     assert response.mode == "answer"
     assert len(response.links) == 1
+    assert response.latency_ms == 150
 
 
 def test_answer_response_invalid_missing_fields():

@@ -94,9 +94,14 @@ curl -X POST "http://localhost:8000/chat/answer" \
   "links": ["/media/page_41.png"],
   "media": {
     "images": ["Diagram 3.1"]
-  }
+  },
+  "latency_ms": 2450
 }
 ```
+
+**Response Fields:**
+
+- `latency_ms`: Total request processing time in milliseconds (includes retrieval and generation)
 
 ## API Documentation
 

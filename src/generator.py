@@ -6,40 +6,7 @@ from groq import Groq
 
 from .models import AnswerResponse
 from .config import TEMPERATURE, API_TIMEOUT_MS, API_MAX_RETRIES
-
-
-SYSTEM_PROMPT = """
-    You are an expert RAG answering assistant.
-
-    Return ONLY valid JSON matching this exact schema:
-
-    {
-    "mode": "answer",
-    "answer": {
-        "title": "string",
-        "summary": "string",
-        "steps": ["string", ...],
-        "verification": ["string", ...]
-    },
-    "links": ["string", ...],
-    "media": {
-        "images": ["string", ...]
-    }
-    }
-
-    CRITICAL RULES:
-    - Output JSON only, with no extra text.
-    - All fields must be present.
-    - "links" must contain ONLY pages from the provided PAGES list.
-    - "media.images" must contain ONLY diagrams from the provided MEDIA list.
-    - Do NOT invent or hallucinate page numbers or media files.
-    - Use ONLY the exact page and media references provided in the PAGES and MEDIA sections.
-    - "steps" must be actionable.
-    - "verification" must reference how the pages support the answer.
-    - Use ONLY the provided context. No hallucinations.
-    - If the context is not relevant to the question, indicate that no relevant
-      information was found.
-"""
+from .prompts import ANSWER_GENERATION_SYSTEM_PROMPT, get_answer_generation_user_prompt
 
 
 class AnswerGenerator:
@@ -47,6 +14,43 @@ class AnswerGenerator:
 
     def __init__(self):
         self.client = Groq(timeout=API_TIMEOUT_MS / 1000)
+
+    def _detect_hallucination(self, output):
+        """
+        Detect if the model is hallucinating by checking for telltale phrases
+        in the verification or summary fields.
+
+        Returns True if hallucination detected, False otherwise.
+        """
+        hallucination_indicators = [
+            "general knowledge",
+            "does not directly relate",
+            "does not provide any information",
+            "based on common knowledge",
+            "not mentioned in",
+            "context does not contain",
+            "outside the provided context",
+            "beyond the scope",
+            "however, based on",
+            "not directly related to",
+            "does not discuss",
+        ]
+
+        # Check verification field
+        verification = output.get("answer", {}).get("verification", [])
+        for item in verification:
+            item_lower = item.lower()
+            for indicator in hallucination_indicators:
+                if indicator in item_lower:
+                    return True
+
+        # Check summary
+        summary = output.get("answer", {}).get("summary", "").lower()
+        for indicator in hallucination_indicators:
+            if indicator in summary:
+                return True
+
+        return False
 
     def _validate_references(self, output, pages, media_files):
         """
@@ -74,19 +78,9 @@ class AnswerGenerator:
         if not context.strip():
             raise ValueError("Context cannot be empty")
 
-        user_prompt = f"""
-QUESTION:
-{query}
-
-CONTEXT:
-{context}
-
-PAGES:
-{pages}
-
-MEDIA:
-{media_files}
-"""
+        user_prompt = get_answer_generation_user_prompt(
+            query, context, pages, media_files
+        )
 
         # Retry loop (simple & robust)
         response_text = None
@@ -96,7 +90,7 @@ MEDIA:
                     model="llama-3.1-8b-instant",
                     temperature=TEMPERATURE,
                     messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "system", "content": ANSWER_GENERATION_SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt},
                     ],
                 )
@@ -116,6 +110,20 @@ MEDIA:
                 response_text.find("{") : response_text.rfind("}") + 1
             ]
             result = json.loads(cleaned)
+
+        # Detect hallucination - if detected, return "No Information Found" response
+        if self._detect_hallucination(result):
+            result = {
+                "mode": "answer",
+                "answer": {
+                    "title": "No Information Found",
+                    "summary": "No relevant information was found in the documentation.",
+                    "steps": [],
+                    "verification": [],
+                },
+                "links": [],
+                "media": {"images": []},
+            }
 
         # Filter out hallucinated references
         cleaned_result = self._validate_references(result, pages, media_files)

@@ -1,6 +1,5 @@
 """Test utility functions"""
 
-import pytest
 from src.utils import count_tokens, find_diagram_ids, context_is_relevant
 
 

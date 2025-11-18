@@ -1,9 +1,12 @@
 """Answer generation - copied exactly from RAG.py"""
 
 import json
+import logging
 from groq import Groq
 
 from .models import AnswerResponse
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """
 You are an expert RAG answering assistant.
@@ -41,7 +44,12 @@ class AnswerGenerator:
     """Answer generation class"""
 
     def __init__(self):
-        self.groq_client = Groq()
+        try:
+            self.groq_client = Groq()
+            logger.info("AnswerGenerator initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize AnswerGenerator: {e}")
+            raise
 
     def validate_answer_against_context(
         self, model_output, context, pages, media_files
@@ -78,7 +86,33 @@ class AnswerGenerator:
         return model_output
 
     def generate_structured_answer(self, query, context, pages, media_files):
-        user_prompt = f"""
+        """
+        Generate structured answer using Groq LLM.
+
+        Args:
+            query: User question
+            context: Retrieved context text
+            pages: List of page references
+            media_files: List of media file references
+
+        Returns:
+            AnswerResponse object
+
+        Raises:
+            ValueError: If inputs are invalid
+            Exception: If answer generation fails
+        """
+        try:
+            # Validate inputs
+            if not query or not query.strip():
+                raise ValueError("Query cannot be empty")
+
+            if not context or not context.strip():
+                raise ValueError("Context cannot be empty")
+
+            logger.info(f"Generating answer for query: {query[:100]}...")
+
+            user_prompt = f"""
 QUESTION:
 {query}
 
@@ -92,32 +126,55 @@ MEDIA:
 {media_files}
 """
 
-        completion = self.groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            temperature=0,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+            # Call Groq API
+            try:
+                completion = self.groq_client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    temperature=0,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                )
+            except Exception as e:
+                logger.error(f"Groq API call failed: {e}")
+                raise Exception(f"Failed to call Groq API: {str(e)}")
 
-        raw_output = completion.choices[0].message.content
+            raw_output = completion.choices[0].message.content
+            logger.debug(f"Raw LLM output: {raw_output[:200]}...")
 
-        # Parse JSON safely
-        try:
-            json_output = json.loads(raw_output)
-        except json.JSONDecodeError:
-            # If LLM adds stray characters, extract JSON using a regex fallback
-            cleaned = raw_output[raw_output.find("{") : raw_output.rfind("}") + 1]
-            json_output = json.loads(cleaned)
+            # Parse JSON safely
+            try:
+                json_output = json.loads(raw_output)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Initial JSON parse failed: {e}, trying fallback")
+                try:
+                    # If LLM adds stray characters, extract JSON using a regex fallback
+                    cleaned = raw_output[
+                        raw_output.find("{") : raw_output.rfind("}") + 1
+                    ]
+                    json_output = json.loads(cleaned)
+                    logger.info("Fallback JSON parsing succeeded")
+                except json.JSONDecodeError as e2:
+                    logger.error(f"Fallback JSON parse also failed: {e2}")
+                    raise Exception(f"Failed to parse LLM output as JSON: {str(e2)}")
 
-        # Validate with Pydantic
-        validated = AnswerResponse(**json_output)
+            # Validate with Pydantic
+            try:
+                validated = AnswerResponse(**json_output)
+            except Exception as e:
+                logger.error(f"Pydantic validation failed: {e}")
+                raise Exception(f"Invalid answer structure: {str(e)}")
 
-        # 🔥 Final hallucination fix: check references + content
-        # final = self.validate_answer_against_context(
-        #     validated.model_dump(), context, pages, media_files
-        # )
+            # 🔥 Final hallucination fix: check references + content
+            # final = self.validate_answer_against_context(
+            #     validated.model_dump(), context, pages, media_files
+            # )
 
-        return validated
+            logger.info("Answer generated successfully")
+            return validated
+
+        except Exception as e:
+            logger.error(f"Answer generation failed: {e}")
+            raise
         # return AnswerResponse(**final)

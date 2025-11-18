@@ -3,6 +3,17 @@
 import pytest
 import os
 
+# Set environment variables BEFORE any other imports
+os.environ["OPENAI_API_KEY"] = "test-openai-key-12345"
+os.environ["GROQ_API_KEY"] = "test-groq-key-12345"
+
+
+def pytest_configure(config):
+    """Configure pytest - runs before test collection"""
+    # Ensure environment variables are set
+    os.environ["OPENAI_API_KEY"] = "test-openai-key-12345"
+    os.environ["GROQ_API_KEY"] = "test-groq-key-12345"
+
 
 @pytest.fixture
 def sample_context():
@@ -17,10 +28,3 @@ def sample_context():
 def sample_query():
     """Sample query for testing"""
     return "What are the fire safety requirements?"
-
-
-@pytest.fixture
-def mock_env_vars(monkeypatch):
-    """Mock environment variables for testing"""
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-    monkeypatch.setenv("GROQ_API_KEY", "test-key-456")

@@ -34,7 +34,7 @@ META_PATH = "data/fire_safety_metadata.pkl"
 TEMPERATURE = 0  # deterministic, factual outputs for technical docs
 
 # API settings
-API_TIMEOUT_MS = 8000  # 8 seconds timeout
+API_TIMEOUT_MS = 3000  # 3 seconds timeout
 API_MAX_RETRIES = 2  # number of retries on failure
 
 # Legacy settings (deprecated, kept for backward compatibility)

@@ -230,6 +230,19 @@ The project includes automated workflows:
 - Pydantic validation for data quality
 - JSON parsing with fallback handling
 
+## ⚙️ RAG Configuration
+
+**Optimized Settings:**
+
+- **Chunk Size:** 600 characters (~150 tokens) - Maintains semantic coherence for technical regulations while preventing information dilution
+- **Overlap:** 100 characters - Ensures cross-chunk context continuity, preventing answer fragmentation at boundaries
+- **Embedding:** `text-embedding-3-small` - Optimal cost-performance ratio; 1536 dimensions sufficient for domain-specific retrieval
+- **Top-k:** 5 results - Balances answer comprehensiveness with noise reduction; more degrades precision
+- **Candidate-k:** 20 - Provides reranker adequate selection pool (4x final results)
+- **Temperature:** 0 - Eliminates stochasticity for deterministic, factual responses critical in regulatory contexts
+
+These parameters optimize retrieval precision and answer quality for structured technical documents while maintaining efficiency.
+
 ## 📚 Documentation
 
 - [API Documentation](API_README.md) - FastAPI endpoints

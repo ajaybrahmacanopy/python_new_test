@@ -6,6 +6,7 @@ from groq import Groq
 from .embeddings import EmbeddingManager
 from .utils import context_is_relevant
 from .pdf_processor import PDFProcessor
+from .config import TOP_K, CANDIDATE_K, TEMPERATURE
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ A score of 0 means "irrelevant".
                     response = self.groq_client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": prompt}],
-                        temperature=0,
+                        temperature=TEMPERATURE,
                     )
 
                     try:
@@ -90,7 +91,7 @@ A score of 0 means "irrelevant".
             logger.error(f"Reranking failed: {e}")
             raise
 
-    def retrieve_with_reranking(self, query, top_k=5, candidate_k=20):
+    def retrieve_with_reranking(self, query, top_k=TOP_K, candidate_k=CANDIDATE_K):
         """
         Retrieve and rerank results for a query.
 

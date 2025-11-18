@@ -5,6 +5,7 @@ import logging
 from groq import Groq
 
 from .models import AnswerResponse
+from .config import TEMPERATURE
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ MEDIA:
             try:
                 completion = self.groq_client.chat.completions.create(
                     model="llama-3.1-8b-instant",
-                    temperature=0,
+                    temperature=TEMPERATURE,
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt},

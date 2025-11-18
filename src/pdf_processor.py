@@ -6,7 +6,7 @@ import fitz  # PyMuPDF
 import pdfplumber
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from .config import PDF_PATH, MEDIA_DIR
+from .config import PDF_PATH, MEDIA_DIR, CHUNK_SIZE, CHUNK_OVERLAP
 from .utils import count_tokens, find_diagram_ids
 
 os.makedirs(MEDIA_DIR, exist_ok=True)
@@ -16,10 +16,10 @@ class PDFProcessor:
     """PDF processing class"""
 
     def __init__(self):
-        # Recommended chunk settings
+        # Optimized chunk settings for technical documents
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=300,  # Adjust based on your Llama context needs
-            chunk_overlap=50,
+            chunk_size=CHUNK_SIZE,
+            chunk_overlap=CHUNK_OVERLAP,
             separators=["\n\n", "\n", ". ", " ", ""],
         )
 

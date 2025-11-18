@@ -79,8 +79,8 @@ black src/ api.py main.py tests/
 
 Default settings in `src/config.py`:
 
-- **Chunk size: 1000 characters** (~150 tokens) - Balances context preservation with retrieval precision. Large enough to capture complete concepts in technical documentation while small enough for focused retrieval.
-- **Chunk overlap: 150 characters** (15%) - Ensures critical information spanning chunk boundaries isn't lost, maintaining continuity across splits.
+- **Chunk size: 1000 characters** - Balances context preservation with retrieval precision. Large enough to capture complete concepts in technical documentation while small enough for focused retrieval.
+- **Chunk overlap: 150 characters** - Ensures critical information spanning chunk boundaries isn't lost, maintaining continuity across splits.
 - **Top-k: 5** - Provides sufficient context diversity without overwhelming the LLM. After reranking from 30 FAISS candidates, top 5 ensures quality over quantity.
 - **Candidate-k: 30** - Initial FAISS retrieval pool for LLM reranking. Large enough to capture diverse relevant passages while keeping reranking latency manageable (~2-3s).
 - **Embedding: text-embedding-3-small** - OpenAI's cost-effective model (1536-dim) with strong semantic understanding. Balances performance and affordability for technical document retrieval.

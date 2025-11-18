@@ -5,6 +5,7 @@ from groq import Groq
 
 from .embeddings import EmbeddingManager
 from .utils import context_is_relevant
+from .pdf_processor import PDFProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,12 @@ A score of 0 means "irrelevant".
             if not context_is_relevant(query, context_text):
                 logger.info("Context not relevant to query")
                 return None, None, None  # signal irrelevance
+
+            # Ensure all referenced images exist (generate on-demand if missing)
+            try:
+                PDFProcessor.ensure_images_exist(pages)
+            except Exception as e:
+                logger.warning(f"Failed to ensure images exist: {e}")
 
             logger.info(
                 f"Retrieved {len(pages)} pages and {len(media_files)} media files"

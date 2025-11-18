@@ -7,6 +7,9 @@ load_dotenv()
 
 openai_key = os.getenv("OPENAI_API_KEY")
 groq_key = os.getenv("GROQ_API_KEY")
+
+# Need to remove this once we have a proper solution for the KMP_DUPLICATE_LIB_OK issue
+# Have added due to time constraints
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # PDF Settings

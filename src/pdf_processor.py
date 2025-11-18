@@ -24,16 +24,57 @@ class PDFProcessor:
         )
 
     def get_page_image_path(self, page_num: int) -> str:
+        """
+        Get path to page image, generating it on-demand if missing.
+
+        Args:
+            page_num: Page number (1-indexed)
+
+        Returns:
+            Path to image file (e.g., "/media/page_1.png")
+        """
         filename = f"page_{page_num}.png"
         out_path = os.path.join(MEDIA_DIR, filename)
 
         if not os.path.exists(out_path):
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(f"Generating missing image: {filename}")
+
             with fitz.open(PDF_PATH) as doc:
                 page = doc[page_num - 1]
-                pix = page.get_pixmap(dpi=10)
+                pix = page.get_pixmap(dpi=72)
                 pix.save(out_path)
 
         return f"/media/{filename}"
+
+    @staticmethod
+    def ensure_images_exist(media_paths):
+        """
+        Ensure all referenced images exist, generating missing ones on-demand.
+
+        Args:
+            media_paths: List of media paths (e.g., ["/media/page_1.png", ...])
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        processor = PDFProcessor()
+
+        for media_path in media_paths:
+            # Extract page number from paths like "/media/page_61.png"
+            if "/media/page_" in media_path and media_path.endswith(".png"):
+                try:
+                    # Extract: "/media/page_61.png" -> "61"
+                    page_num = int(media_path.split("page_")[1].split(".png")[0])
+                    # This will generate the image if it doesn't exist
+                    processor.get_page_image_path(page_num)
+                except (ValueError, IndexError) as e:
+                    logger.warning(
+                        f"Could not parse page number from {media_path}: {e}"
+                    )
 
     def extract_embedded_images(self, doc, page, page_num: int):
         """
@@ -51,8 +92,9 @@ class PDFProcessor:
             filename = f"page_{page_num}_img_{img_index}.{ext}"
             out_path = os.path.join(MEDIA_DIR, filename)
 
-            with open(out_path, "wb") as f:
-                f.write(image_bytes)
+            if not os.path.exists(out_path):
+                with open(out_path, "wb") as f:
+                    f.write(image_bytes)
 
             saved_paths.append(f"/media/{filename}")
 

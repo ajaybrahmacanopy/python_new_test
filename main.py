@@ -6,13 +6,52 @@ Build FAISS index from PDF
 import os
 import sys
 import logging
+import fitz
 from src import INDEX_PATH, META_PATH, EmbeddingManager
+from src.pdf_processor import PDFProcessor
+from src.config import PDF_PATH, MEDIA_DIR
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+def ensure_images_generated():
+    """Check and generate any missing page images"""
+    try:
+        processor = PDFProcessor()
+        doc = fitz.open(PDF_PATH)
+        total_pages = len(doc)
+        doc.close()
+
+        # Count missing images
+        missing = []
+        for page_num in range(1, total_pages + 1):
+            filename = f"page_{page_num}.png"
+            out_path = os.path.join(MEDIA_DIR, filename)
+            if not os.path.exists(out_path):
+                missing.append(page_num)
+
+        if missing:
+            print(f"📸 Generating {len(missing)} missing images...")
+            logger.info(f"Generating {len(missing)} missing page images")
+
+            for i, page_num in enumerate(missing, 1):
+                processor.get_page_image_path(page_num)
+                if i % 10 == 0 or i == len(missing):
+                    print(f"   Progress: {i}/{len(missing)}")
+
+            print(f"✅ Generated {len(missing)} images")
+            logger.info(f"Generated {len(missing)} images successfully")
+        else:
+            logger.info("All page images already exist")
+
+    except Exception as e:
+        logger.warning(f"Failed to generate images: {e}")
+        print(f"⚠️  Warning: Could not generate some images: {e}")
+
 
 if __name__ == "__main__":
     try:
@@ -41,6 +80,10 @@ if __name__ == "__main__":
             print(f"Index: {INDEX_PATH}")
             print(f"Metadata: {META_PATH}")
             logger.info("Index files already exist")
+
+        # Ensure all page images are generated
+        print()
+        ensure_images_generated()
 
     except Exception as e:
         logger.error(f"Fatal error: {e}")

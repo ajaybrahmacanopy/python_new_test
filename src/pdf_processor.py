@@ -11,169 +11,169 @@ from .utils import count_tokens, find_diagram_ids
 
 os.makedirs(MEDIA_DIR, exist_ok=True)
 
-# Recommended chunk settings
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=300,  # Adjust based on your Llama context needs
-    chunk_overlap=50,
-    separators=["\n\n", "\n", ". ", " ", ""],
-)
 
+class PDFProcessor:
+    """PDF processing class"""
 
-def get_page_image_path(page_num: int) -> str:
-    filename = f"page_{page_num}.png"
-    out_path = os.path.join(MEDIA_DIR, filename)
+    def __init__(self):
+        # Recommended chunk settings
+        self.splitter = RecursiveCharacterTextSplitter(
+            chunk_size=300,  # Adjust based on your Llama context needs
+            chunk_overlap=50,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
 
-    if not os.path.exists(out_path):
-        with fitz.open(PDF_PATH) as doc:
-            page = doc[page_num - 1]
-            pix = page.get_pixmap(dpi=10)
-            pix.save(out_path)
-
-    return f"/media/{filename}"
-
-
-def extract_embedded_images(doc, page, page_num: int):
-    """
-    Extract diagrams & inline images from a page.
-    """
-    image_list = page.get_images(full=True)
-    saved_paths = []
-
-    for img_index, img in enumerate(image_list):
-        xref = img[0]
-        base_image = doc.extract_image(xref)
-        image_bytes = base_image["image"]
-        ext = base_image["ext"]
-
-        filename = f"page_{page_num}_img_{img_index}.{ext}"
+    def get_page_image_path(self, page_num: int) -> str:
+        filename = f"page_{page_num}.png"
         out_path = os.path.join(MEDIA_DIR, filename)
 
-        with open(out_path, "wb") as f:
-            f.write(image_bytes)
+        if not os.path.exists(out_path):
+            with fitz.open(PDF_PATH) as doc:
+                page = doc[page_num - 1]
+                pix = page.get_pixmap(dpi=10)
+                pix.save(out_path)
 
-        saved_paths.append(f"/media/{filename}")
+        return f"/media/{filename}"
 
-    return saved_paths
+    def extract_embedded_images(self, doc, page, page_num: int):
+        """
+        Extract diagrams & inline images from a page.
+        """
+        image_list = page.get_images(full=True)
+        saved_paths = []
 
+        for img_index, img in enumerate(image_list):
+            xref = img[0]
+            base_image = doc.extract_image(xref)
+            image_bytes = base_image["image"]
+            ext = base_image["ext"]
 
-def extract_paragraphs(page):
-    """
-    Splits on double newlines.
-    """
-    raw_text = page.get_text("text")
-    paragraphs = [p.strip() for p in raw_text.split("\n\n") if p.strip()]
-    return paragraphs
+            filename = f"page_{page_num}_img_{img_index}.{ext}"
+            out_path = os.path.join(MEDIA_DIR, filename)
 
+            with open(out_path, "wb") as f:
+                f.write(image_bytes)
 
-def extract_tables_from_page(pdf_path, page_num):
-    """
-    Extracts tables using pdfplumber.
-    Returns list of tables as list-of-lists.
-    """
-    tables = []
-    with pdfplumber.open(pdf_path) as pdf:
-        page = pdf.pages[page_num - 1]
-        extracted = page.extract_tables()
-        for t in extracted:
-            if t:
-                tables.append(t)
-    return tables
+            saved_paths.append(f"/media/{filename}")
 
+        return saved_paths
 
-def table_to_markdown(table):
-    """
-    Convert a table (list-of-lists) into Markdown safely.
-    Handles None, empty strings, uneven rows, etc.
-    """
-    md = ""
+    def extract_paragraphs(self, page):
+        """
+        Splits on double newlines.
+        """
+        raw_text = page.get_text("text")
+        paragraphs = [p.strip() for p in raw_text.split("\n\n") if p.strip()]
+        return paragraphs
 
-    # Skip empty/invalid tables
-    if not table or not isinstance(table, list):
-        return ""
+    def extract_tables_from_page(self, pdf_path, page_num):
+        """
+        Extracts tables using pdfplumber.
+        Returns list of tables as list-of-lists.
+        """
+        tables = []
+        with pdfplumber.open(pdf_path) as pdf:
+            page = pdf.pages[page_num - 1]
+            extracted = page.extract_tables()
+            for t in extracted:
+                if t:
+                    tables.append(t)
+        return tables
 
-    # Sanitize header
-    header = table[0]
-    header = [(str(col).strip() if col is not None else "") for col in header]
+    def table_to_markdown(self, table):
+        """
+        Convert a table (list-of-lists) into Markdown safely.
+        Handles None, empty strings, uneven rows, etc.
+        """
+        md = ""
 
-    # Build header row
-    md += "| " + " | ".join(header) + " |\n"
-    md += "| " + " | ".join(["---"] * len(header)) + " |\n"
+        # Skip empty/invalid tables
+        if not table or not isinstance(table, list):
+            return ""
 
-    # Process all remaining rows
-    for row in table[1:]:
-        clean_row = [str(cell).strip() if cell is not None else "" for cell in row]
+        # Sanitize header
+        header = table[0]
+        header = [(str(col).strip() if col is not None else "") for col in header]
 
-        # Pad row if it's shorter than header
-        if len(clean_row) < len(header):
-            clean_row += [""] * (len(header) - len(clean_row))
+        # Build header row
+        md += "| " + " | ".join(header) + " |\n"
+        md += "| " + " | ".join(["---"] * len(header)) + " |\n"
 
-        md += "| " + " | ".join(clean_row) + " |\n"
+        # Process all remaining rows
+        for row in table[1:]:
+            clean_row = [str(cell).strip() if cell is not None else "" for cell in row]
 
-    return md
+            # Pad row if it's shorter than header
+            if len(clean_row) < len(header):
+                clean_row += [""] * (len(header) - len(clean_row))
 
+            md += "| " + " | ".join(clean_row) + " |\n"
 
-def build_chunk_record(text, page_num, page_img, embedded_imgs, is_table=False):
-    diagram_ids = find_diagram_ids(text)
+        return md
 
-    media_paths = [page_img] + embedded_imgs
+    def build_chunk_record(
+        self, text, page_num, page_img, embedded_imgs, is_table=False
+    ):
+        diagram_ids = find_diagram_ids(text)
 
-    return {
-        "id": str(uuid.uuid4()),
-        "page": page_num,
-        "text": text,
-        "token_count": count_tokens(text),
-        "contains_diagram": len(diagram_ids) > 0,
-        "diagram_ids": diagram_ids,
-        "media": media_paths,
-        "is_table": is_table,
-    }
+        media_paths = [page_img] + embedded_imgs
 
+        return {
+            "id": str(uuid.uuid4()),
+            "page": page_num,
+            "text": text,
+            "token_count": count_tokens(text),
+            "contains_diagram": len(diagram_ids) > 0,
+            "diagram_ids": diagram_ids,
+            "media": media_paths,
+            "is_table": is_table,
+        }
 
-def build_chunks_from_pdf(pdf_path):
-    doc = fitz.open(pdf_path)
-    all_chunks = []
+    def build_chunks_from_pdf(self, pdf_path):
+        doc = fitz.open(pdf_path)
+        all_chunks = []
 
-    for page_idx in range(len(doc)):
-        page_num = page_idx + 1
-        page = doc[page_idx]
+        for page_idx in range(len(doc)):
+            page_num = page_idx + 1
+            page = doc[page_idx]
 
-        print(f"Processing page {page_num}...")
+            print(f"Processing page {page_num}...")
 
-        # Extract page-level assets
-        page_img = get_page_image_path(page_num)
-        embedded_imgs = extract_embedded_images(doc, page, page_num)
-        tables = extract_tables_from_page(pdf_path, page_num)
+            # Extract page-level assets
+            page_img = self.get_page_image_path(page_num)
+            embedded_imgs = self.extract_embedded_images(doc, page, page_num)
+            tables = self.extract_tables_from_page(pdf_path, page_num)
 
-        # 1️⃣ Convert tables to markdown chunks
-        for t in tables:
-            md_table = table_to_markdown(t)
+            # 1️⃣ Convert tables to markdown chunks
+            for t in tables:
+                md_table = self.table_to_markdown(t)
 
-            all_chunks.append(
-                build_chunk_record(
-                    text=md_table,
-                    page_num=page_num,
-                    page_img=page_img,
-                    embedded_imgs=embedded_imgs,
-                    is_table=True,
+                all_chunks.append(
+                    self.build_chunk_record(
+                        text=md_table,
+                        page_num=page_num,
+                        page_img=page_img,
+                        embedded_imgs=embedded_imgs,
+                        is_table=True,
+                    )
                 )
-            )
 
-        # 2️⃣ Extract text from page
-        raw_text = page.get_text("text") or ""
+            # 2️⃣ Extract text from page
+            raw_text = page.get_text("text") or ""
 
-        # 3️⃣ Generate chunks using LangChain splitter
-        text_chunks = splitter.split_text(raw_text)
+            # 3️⃣ Generate chunks using LangChain splitter
+            text_chunks = self.splitter.split_text(raw_text)
 
-        # 4️⃣ Add each text chunk with metadata
-        for ch in text_chunks:
-            all_chunks.append(
-                build_chunk_record(
-                    text=ch.strip(),
-                    page_num=page_num,
-                    page_img=page_img,
-                    embedded_imgs=embedded_imgs,
-                    is_table=False,
+            # 4️⃣ Add each text chunk with metadata
+            for ch in text_chunks:
+                all_chunks.append(
+                    self.build_chunk_record(
+                        text=ch.strip(),
+                        page_num=page_num,
+                        page_img=page_img,
+                        embedded_imgs=embedded_imgs,
+                        is_table=False,
+                    )
                 )
-            )
 
-    return all_chunks
+        return all_chunks

@@ -54,10 +54,7 @@ curl http://localhost:8000/health
 
 ```json
 {
-  "status": "healthy",
-  "index_ready": true,
-  "index_path": "data/fire_safety.index",
-  "metadata_path": "data/fire_safety_metadata.pkl"
+  "status": "healthy"
 }
 ```
 

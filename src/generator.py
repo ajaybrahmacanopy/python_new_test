@@ -5,8 +5,6 @@ from groq import Groq
 
 from .models import AnswerResponse
 
-groq_client = Groq()
-
 SYSTEM_PROMPT = """
 You are an expert RAG answering assistant.
 
@@ -39,41 +37,48 @@ Rules:
 """
 
 
-def validate_answer_against_context(model_output, context, pages, media_files):
-    """
-    Final hallucination guard:
-    Ensures the model output does not reference content not in context.
-    """
+class AnswerGenerator:
+    """Answer generation class"""
 
-    # 1. Check page links
-    for p in model_output["links"]:
-        if p not in pages:
-            raise ValueError(f"Hallucinated page link: {p}")
+    def __init__(self):
+        self.groq_client = Groq()
 
-    # 2. Check images
-    for img in model_output["media"]["images"]:
-        if img not in media_files:
-            raise ValueError(f"Hallucinated image reference: {img}")
+    def validate_answer_against_context(
+        self, model_output, context, pages, media_files
+    ):
+        """
+        Final hallucination guard:
+        Ensures the model output does not reference content not in context.
+        """
 
-    # 3. Ensure summary/steps contain only words from context
-    ctx_words = set(context.lower().split())
+        # 1. Check page links
+        for p in model_output["links"]:
+            if p not in pages:
+                raise ValueError(f"Hallucinated page link: {p}")
 
-    def check_text(text):
-        for w in text.lower().split():
-            if w not in ctx_words:
-                # Allow small stopword overlap
-                if len(w) > 4:
-                    pass
+        # 2. Check images
+        for img in model_output["media"]["images"]:
+            if img not in media_files:
+                raise ValueError(f"Hallucinated image reference: {img}")
 
-    check_text(model_output["answer"]["summary"])
-    for step in model_output["answer"]["steps"]:
-        check_text(step)
+        # 3. Ensure summary/steps contain only words from context
+        ctx_words = set(context.lower().split())
 
-    return model_output
+        def check_text(text):
+            for w in text.lower().split():
+                if w not in ctx_words:
+                    # Allow small stopword overlap
+                    if len(w) > 4:
+                        pass
 
+        check_text(model_output["answer"]["summary"])
+        for step in model_output["answer"]["steps"]:
+            check_text(step)
 
-def generate_structured_answer(query, context, pages, media_files):
-    user_prompt = f"""
+        return model_output
+
+    def generate_structured_answer(self, query, context, pages, media_files):
+        user_prompt = f"""
 QUESTION:
 {query}
 
@@ -87,32 +92,32 @@ MEDIA:
 {media_files}
 """
 
-    completion = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        temperature=0,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
+        completion = self.groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            temperature=0,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
 
-    raw_output = completion.choices[0].message.content
+        raw_output = completion.choices[0].message.content
 
-    # Parse JSON safely
-    try:
-        json_output = json.loads(raw_output)
-    except:
-        # If LLM adds stray characters, extract JSON using a regex fallback
-        cleaned = raw_output[raw_output.find("{") : raw_output.rfind("}") + 1]
-        json_output = json.loads(cleaned)
+        # Parse JSON safely
+        try:
+            json_output = json.loads(raw_output)
+        except:
+            # If LLM adds stray characters, extract JSON using a regex fallback
+            cleaned = raw_output[raw_output.find("{") : raw_output.rfind("}") + 1]
+            json_output = json.loads(cleaned)
 
-    # Validate with Pydantic
-    validated = AnswerResponse(**json_output)
+        # Validate with Pydantic
+        validated = AnswerResponse(**json_output)
 
-    # 🔥 Final hallucination fix: check references + content
-    # final = validate_answer_against_context(
-    #     validated.model_dump(), context, pages, media_files
-    # )
+        # 🔥 Final hallucination fix: check references + content
+        # final = self.validate_answer_against_context(
+        #     validated.model_dump(), context, pages, media_files
+        # )
 
-    return validated
-    # return AnswerResponse(**final)
+        return validated
+        # return AnswerResponse(**final)

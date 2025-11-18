@@ -106,7 +106,7 @@ MEDIA:
         # Parse JSON safely
         try:
             json_output = json.loads(raw_output)
-        except:
+        except json.JSONDecodeError:
             # If LLM adds stray characters, extract JSON using a regex fallback
             cleaned = raw_output[raw_output.find("{") : raw_output.rfind("}") + 1]
             json_output = json.loads(cleaned)

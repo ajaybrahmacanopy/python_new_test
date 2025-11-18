@@ -1,7 +1,6 @@
 """Retrieval and reranking - copied exactly from RAG.py"""
 
 from groq import Groq
-import numpy as np
 
 from .embeddings import EmbeddingManager
 from .utils import context_is_relevant
@@ -45,7 +44,7 @@ A score of 0 means "irrelevant".
 
             try:
                 score = float(response.choices[0].message.content.strip())
-            except:
+            except (ValueError, AttributeError):
                 score = 0.0
 
             scored.append((score, r))

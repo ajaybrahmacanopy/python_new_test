@@ -100,7 +100,6 @@ Visit http://localhost:8000/docs for interactive API documentation.
 ├── logs/                    # Log files
 ├── api.py                   # FastAPI application
 ├── main.py                  # Index builder
-├── example.py               # Usage example
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt

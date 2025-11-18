@@ -7,7 +7,9 @@ from .config import OVERLAP_TOKENS
 # OpenAI tokenizer (for text-embedding-3-small)
 enc = tiktoken.get_encoding("cl100k_base")
 
-diagram_pattern = re.compile(r"Diagram\s+\d+\.\d+", re.IGNORECASE)
+diagram_pattern = re.compile(
+    r"(Diagram[\s\u00A0\u2000-\u200B\u202F]*[A-Za-z0-9.\-]+)", re.IGNORECASE
+)
 
 
 def count_tokens(text: str) -> int:

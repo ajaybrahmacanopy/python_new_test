@@ -4,15 +4,10 @@ Regenerate all page images with current DPI settings
 """
 
 import os
-import logging
+from src.logger import logger
 from src import PDFProcessor
 from src.config import MEDIA_DIR
 import fitz
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 
 def regenerate_all_images(force=False):

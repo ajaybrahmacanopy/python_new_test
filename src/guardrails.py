@@ -1,12 +1,10 @@
 """Generic guardrails for RAG system safety and quality using LangChain patterns"""
 
 import re
-import logging
 from typing import List, Optional, Set
 
 from pydantic import BaseModel, Field
-
-logger = logging.getLogger(__name__)
+from .logger import logger
 
 
 class GuardrailViolation(Exception):

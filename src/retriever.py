@@ -47,19 +47,19 @@ class Retriever:
 
             for i, r in enumerate(faiss_results):
                 prompt = f"""
-You are a reranker in a Retrieval-Augmented Generation system.
+                    You are a reranker in a Retrieval-Augmented Generation system.
 
-QUESTION:
-{query}
+                    QUESTION:
+                    {query}
 
-CONTEXT CANDIDATE:
-{r["text"]}
+                    CONTEXT CANDIDATE:
+                    {r["text"]}
 
-Evaluate how relevant this context chunk is to the question.
-Return ONLY a score between 0 and 1.
-A score of 1 means "directly answers the question".
-A score of 0 means "irrelevant".
-"""
+                    Evaluate how relevant this context chunk is to the question.
+                    Return ONLY a score between 0 and 1.
+                    A score of 1 means "directly answers the question".
+                    A score of 0 means "irrelevant".
+                """
 
                 try:
                     response = self.groq_client.chat.completions.create(

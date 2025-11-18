@@ -21,31 +21,82 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying fire
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended)
+### Prerequisites
+
+Before running the application, you need API keys for:
+
+- **OpenAI API** - For text embeddings ([Get key here](https://platform.openai.com/api-keys))
+- **Groq API** - For LLM reranking and generation ([Get key here](https://console.groq.com/keys))
+
+### 1️⃣ Environment Setup
+
+**Create a `.env` file in the project root:**
 
 ```bash
-# Build and run
+# Copy the example below to .env
+cat > .env << EOF
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxx
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxx
+EOF
+```
+
+**Or manually create `.env` with:**
+
+```env
+OPENAI_API_KEY=your_openai_key_here
+GROQ_API_KEY=your_groq_key_here
+```
+
+⚠️ **Important:** Replace `your_openai_key_here` and `your_groq_key_here` with your actual API keys.
+
+### 2️⃣ Start the Application
+
+#### Option A: Docker (Recommended)
+
+```bash
+# Build and start the container
 docker-compose up --build
+
+# API will be available at http://localhost:8000
+# First startup will automatically build FAISS index and extract images
+```
+
+#### Option B: Local Development
+
+```bash
+# 1. Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Build FAISS index and extract images (first time only)
+python main.py
+
+# 4. Start the API server
+uvicorn api:app --reload
 
 # API available at http://localhost:8000
 ```
 
-### Option 2: Local Development
+### 3️⃣ Verify Installation
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Test health endpoint
+curl http://localhost:8000/health
 
-# Set environment variables
-export OPENAI_API_KEY=your_key
-export GROQ_API_KEY=your_key
-
-# Build FAISS index (first time only)
-python main.py
-
-# Run API server
-uvicorn api:app --reload
+# Test query endpoint
+curl -X POST "http://localhost:8000/chat/answer" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What are fire door requirements?"}'
 ```
+
+### 4️⃣ View API Documentation
+
+Open your browser to:
+
+- **Swagger UI:** http://localhost:8000/docs
 
 ## 📁 Project Structure
 
@@ -167,34 +218,26 @@ make clean         # Clean cache files
 make docker-build  # Build Docker image
 ```
 
-## 🐳 Docker
-
-### Build and Run
+## 🐳 Docker Commands
 
 ```bash
-# Build
-docker-compose build
+# Build and run
+docker-compose up --build
 
-# Run (detached)
+# Run in background
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 
-# Stop
+# Stop and remove containers
 docker-compose down
+
+# Rebuild without cache
+docker-compose build --no-cache
 ```
 
-### Environment Variables
-
-Create a `.env` file:
-
-```env
-OPENAI_API_KEY=your_openai_key_here
-GROQ_API_KEY=your_groq_key_here
-```
-
-Docker Compose will automatically load these variables.
+**Note:** Docker Compose automatically loads environment variables from `.env` file.
 
 ## 🔄 GitHub Actions CI/CD
 
@@ -245,9 +288,9 @@ These parameters optimize retrieval precision and answer quality for structured 
 
 ## 📚 Documentation
 
-- [API Documentation](API_README.md) - FastAPI endpoints
-- [Testing Guide](TESTING_README.md) - Testing and CI/CD
-- [Source Documentation](src/README.md) - Code structure
+- **API Documentation:** http://localhost:8000/docs (when running)
+- **Code Structure:** See [Project Structure](#-project-structure) section above
+- **Testing:** See [Testing](#-testing) section above
 
 ## 🛠️ Technologies
 
@@ -282,6 +325,54 @@ Current test coverage: **39%**
 - `.env` file excluded from git
 - `.ipynb_checkpoints/` excluded from git
 - Git history cleaned of sensitive data
+
+## 🔧 Troubleshooting
+
+### API Keys Not Working
+
+```bash
+# Verify .env file exists
+ls -la .env
+
+# Check if variables are loaded (Docker)
+docker-compose config
+
+# Check if variables are loaded (Local)
+echo $OPENAI_API_KEY
+echo $GROQ_API_KEY
+```
+
+### FAISS Index Not Found
+
+```bash
+# Build the index manually
+python main.py
+
+# Check if index was created
+ls -la data/fire_safety.index
+ls -la data/fire_safety_metadata.pkl
+```
+
+### Port Already in Use
+
+```bash
+# Change port in docker-compose.yml (Docker)
+ports:
+  - "8001:8000"  # Use 8001 instead
+
+# Or change port when running locally
+uvicorn api:app --port 8001
+```
+
+### Missing Images
+
+```bash
+# Regenerate all images
+python regenerate_images.py
+
+# Check if images were created
+ls static/media/ | head -10
+```
 
 ## 🎯 Next Steps
 

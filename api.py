@@ -10,6 +10,10 @@ from pydantic import BaseModel
 from src import (
     Retriever,
     AnswerGenerator,
+    GuardrailViolation,
+    validate_input,
+    validate_output,
+    validate_context,
 )
 from src.models import AnswerResponse, AnswerContent, Media
 from src.config import MEDIA_DIR
@@ -66,17 +70,19 @@ def answer_endpoint(request: QueryRequest):
     start_time = time.time()
 
     try:
-        # Validate input
-        if not request.question or not request.question.strip():
-            raise HTTPException(status_code=400, detail="Question cannot be empty")
-
-        logger.info(f"Processing query: {request.question[:100]}...")
+        # 🛡️ GUARDRAIL 1: Input validation (generic, no domain check)
+        try:
+            sanitized_query = validate_input(request.question)
+            logger.info(f"Processing query: {sanitized_query[:100]}...")
+        except GuardrailViolation as e:
+            logger.warning(f"Input guardrail violation: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
 
         # Retrieve and rerank
         retrieval_start = time.time()
         try:
             context, pages, media_files = retriever.retrieve_with_reranking(
-                request.question
+                sanitized_query
             )
         except Exception as e:
             logger.error(f"Retrieval failed: {e}")
@@ -89,7 +95,8 @@ def answer_endpoint(request: QueryRequest):
         if context is None:
             total_latency = int((time.time() - start_time) * 1000)
             logger.info(
-                f"No relevant context found - Retrieval: {retrieval_time:.2f}ms, Total: {total_latency}ms"
+                f"No relevant context found - "
+                f"Retrieval: {retrieval_time:.2f}ms, Total: {total_latency}ms"
             )
             return AnswerResponse(
                 mode="answer",
@@ -104,11 +111,18 @@ def answer_endpoint(request: QueryRequest):
                 latency_ms=total_latency,
             )
 
+        # 🛡️ GUARDRAIL 2: Context validation
+        try:
+            validate_context(context)
+        except GuardrailViolation as e:
+            logger.warning(f"Context guardrail violation: {e}")
+            # Don't fail, just log - proceed with generation
+
         # Generate answer
         generation_start = time.time()
         try:
             result = generator.generate_structured_answer(
-                request.question, context, pages, media_files
+                sanitized_query, context, pages, media_files
             )
         except Exception as e:
             logger.error(f"Answer generation failed: {e}")
@@ -116,6 +130,15 @@ def answer_endpoint(request: QueryRequest):
                 status_code=500, detail=f"Failed to generate answer: {str(e)}"
             )
         generation_time = (time.time() - generation_start) * 1000  # Convert to ms
+
+        # 🛡️ GUARDRAIL 3: Output validation (lenient mode - allows diagram references)
+        try:
+            validate_output(result.model_dump(), pages, media_files, strict=False)
+        except GuardrailViolation as e:
+            logger.error(f"Output guardrail violation: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Generated answer failed validation: {str(e)}"
+            )
 
         # Calculate total latency
         total_latency = int((time.time() - start_time) * 1000)

@@ -5,6 +5,7 @@ from .vector_store import VectorStoreManager
 from .reranker import LlamaReranker
 from .generator import AnswerGenerator
 from .guardrails import validate_context
+from .config import TOP_K, CANDIDATE_K
 
 
 class SimpleRAG:
@@ -12,8 +13,8 @@ class SimpleRAG:
 
     def __init__(
         self,
-        top_k: int = 5,
-        candidate_k: int = 25,
+        top_k: int = TOP_K,
+        candidate_k: int = CANDIDATE_K,
     ):
         self.top_k = top_k
         self.candidate_k = candidate_k

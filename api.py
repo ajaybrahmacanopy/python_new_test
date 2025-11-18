@@ -27,7 +27,7 @@ except Exception as e:
 
 # Initialize SimpleRAG
 try:
-    rag = SimpleRAG(top_k=5, candidate_k=25)
+    rag = SimpleRAG()
     logger.info("SimpleRAG initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize SimpleRAG: {e}")

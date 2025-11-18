@@ -59,33 +59,6 @@ curl -X POST "http://localhost:8000/chat/answer" \
 
 Visit http://localhost:8000/docs for interactive API documentation.
 
-## Project Structure
-
-```
-.
-├── src/                      # Source code
-│   ├── config.py            # Configuration
-│   ├── models.py            # Pydantic models
-│   ├── logger.py            # Loguru logging
-│   ├── pdf_processor.py     # PDF parsing
-│   ├── vector_store.py      # FAISS + BM25 hybrid search
-│   ├── reranker.py          # LLM reranking
-│   ├── generator.py         # Answer generation
-│   ├── simple_rag.py        # End-to-end RAG pipeline
-│   ├── guardrails.py        # Input/output validation
-│   └── utils.py             # Utilities
-├── tests/                   # Unit tests
-├── content/                 # PDF documents
-├── data/                    # FAISS index and metadata
-├── static/media/            # Extracted images
-├── logs/                    # Log files
-├── api.py                   # FastAPI application
-├── main.py                  # Index builder
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
-```
-
 ## Testing
 
 ```bash

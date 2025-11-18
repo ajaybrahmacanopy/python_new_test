@@ -21,20 +21,12 @@ def test_health_endpoint_method():
     assert response.status_code == 405  # Method not allowed
 
 
-@patch("api.retriever.retrieve_with_reranking")
-@patch("api.generator.generate_structured_answer")
-def test_chat_answer_endpoint_success(mock_generate, mock_retrieve):
+@patch("api.rag.answer")
+def test_chat_answer_endpoint_success(mock_rag_answer):
     """Test /chat/answer endpoint with successful response"""
     from src.models import AnswerResponse, AnswerContent, Media
 
-    # Mock retrieval
-    mock_retrieve.return_value = (
-        "Sample context",
-        ["/media/page_1.png"],
-        ["Diagram 1.1"],
-    )
-
-    # Mock generation - return actual AnswerResponse object
+    # Mock SimpleRAG answer - return actual AnswerResponse object
     mock_response = AnswerResponse(
         mode="answer",
         answer=AnswerContent(
@@ -47,7 +39,7 @@ def test_chat_answer_endpoint_success(mock_generate, mock_retrieve):
         media=Media(images=["Diagram 1.1"]),
         latency_ms=100,
     )
-    mock_generate.return_value = mock_response
+    mock_rag_answer.return_value = mock_response
 
     # Test endpoint
     response = client.post(
@@ -62,11 +54,25 @@ def test_chat_answer_endpoint_success(mock_generate, mock_retrieve):
     assert isinstance(data["latency_ms"], int)
 
 
-@patch("api.retriever.retrieve_with_reranking")
-def test_chat_answer_endpoint_no_context(mock_retrieve):
+@patch("api.rag.answer")
+def test_chat_answer_endpoint_no_context(mock_rag_answer):
     """Test /chat/answer when no relevant context found"""
-    # Mock retrieval returning None
-    mock_retrieve.return_value = (None, None, None)
+    from src.models import AnswerResponse, AnswerContent, Media
+
+    # Mock SimpleRAG answer for no context scenario
+    mock_response = AnswerResponse(
+        mode="answer",
+        answer=AnswerContent(
+            title="No Information Found",
+            summary="No relevant information was found in the documentation.",
+            steps=["Try rephrasing your question"],
+            verification=["No supporting documents"],
+        ),
+        links=[],
+        media=Media(images=[]),
+        latency_ms=50,
+    )
+    mock_rag_answer.return_value = mock_response
 
     response = client.post("/chat/answer", json={"question": "Irrelevant question"})
 

@@ -4,7 +4,6 @@ import json
 import time
 from groq import Groq
 
-from .logger import logger
 from .models import AnswerResponse
 from .config import TEMPERATURE, API_TIMEOUT_MS, API_MAX_RETRIES
 

@@ -2,7 +2,6 @@
 
 import os
 import pickle
-from typing import List, Dict, Any
 
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
@@ -10,7 +9,6 @@ from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
 
-from .logger import logger
 from .config import EMBED_MODEL, INDEX_PATH, META_PATH, PDF_PATH
 from .pdf_processor import PDFProcessor
 from .reranker import LlamaReranker
@@ -55,7 +53,7 @@ class VectorStoreManager:
         with open(META_PATH, "wb") as f:
             pickle.dump(chunks, f)
 
-        print(f"FAISS + metadata saved successfully.")
+        print("FAISS + metadata saved successfully.")
 
     # -------------------------------------------------------
     # 2️⃣ LOAD FAISS + METADATA

@@ -1,4 +1,4 @@
-"""Configuration settings"""
+"""Configuration settings for the RAG system"""
 
 import os
 from dotenv import load_dotenv
@@ -18,25 +18,24 @@ MEDIA_DIR = "static/media"
 
 # RAG Configuration
 # Chunking settings
-CHUNK_SIZE = 1000  # characters (~150 tokens) - balances context and precision
-CHUNK_OVERLAP = 150  # characters (~25 tokens) - ensures continuity
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 150
 
 # Retrieval settings
-TOP_K = 5  # final results after reranking
-CANDIDATE_K = 30  # initial FAISS candidates for reranking
+TOP_K = 5
+CANDIDATE_K = 30
 
 # Embedding settings
-EMBED_MODEL = "text-embedding-3-small"  # cost-effective, high-quality
+EMBED_MODEL = "text-embedding-3-small"
 INDEX_PATH = "data/fire_safety.index"
 META_PATH = "data/fire_safety_metadata.pkl"
 
 # Generation settings
-TEMPERATURE = 0  # deterministic, factual outputs for technical docs
+TEMPERATURE = 0
 
 # API settings
-API_TIMEOUT_MS = 3000  # 3 seconds timeout
-API_MAX_RETRIES = 2  # number of retries on failure
+API_TIMEOUT_MS = 3000
+API_MAX_RETRIES = 2
 
-# Legacy settings (deprecated, kept for backward compatibility)
-MAX_TOKENS = 350
+# Overlap tokens for the text-embedding-3-small model
 OVERLAP_TOKENS = 50

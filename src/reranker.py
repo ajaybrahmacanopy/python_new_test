@@ -5,6 +5,7 @@ from groq import Groq
 
 from .logger import logger
 from .models import RerankResult
+from .prompts import RERANKING_SYSTEM_PROMPT, get_reranking_user_prompt
 
 
 class LlamaReranker:
@@ -28,45 +29,14 @@ class LlamaReranker:
             blocks.append(f"## Passage {i}\n{p['text'][:1000]}")
         passages_block = "\n\n".join(blocks)
 
-        system_prompt = """
-You are a relevance scoring model for Retrieval-Augmented Generation.
-
-Return ONLY valid JSON.
-No explanations. No extra text.
-
-JSON Schema:
-
-{
-  "results": [
-    {"id": number, "score": number between 0 and 1},
-    ...
-  ]
-}
-
-Rules:
-- Score reflects how well the passage answers the query.
-- Higher = more relevant.
-- Score ONLY based on semantic relevance.
-- Do not change passage IDs.
-- Do not include text from passages.
-"""
-
-        user_prompt = f"""
-Query:
-{query}
-
-Passages:
-{passages_block}
-
-Return JSON only.
-"""
+        user_prompt = get_reranking_user_prompt(query, passages_block)
 
         # Call Llama 3.1 8B Instant
         resp = self.client.chat.completions.create(
             model=self.model,
             temperature=0,
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": RERANKING_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
         )

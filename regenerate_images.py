@@ -62,7 +62,7 @@ def regenerate_all_images(force=False):
                     f"Progress: {page_num}/{total_pages} (generated {generated})"
                 )
 
-    logger.info(f"✅ Complete! Generated: {generated}, Skipped: {skipped}")
+    logger.info(f"Complete! Generated: {generated}, Skipped: {skipped}")
 
     # Show file size summary
     total_size = 0
@@ -86,12 +86,12 @@ if __name__ == "__main__":
     force = "--force" in sys.argv
 
     if force:
-        print("🔄 Force regeneration mode: Will regenerate ALL images")
+        print("Force regeneration mode: Will regenerate ALL images")
         response = input("Are you sure? (y/n): ")
         if response.lower() != "y":
             print("Cancelled")
             sys.exit(0)
     else:
-        print("📸 Generating missing images only (use --force to regenerate all)")
+        print("Generating missing images only (use --force to regenerate all)")
 
     regenerate_all_images(force=force)

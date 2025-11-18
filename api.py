@@ -62,7 +62,7 @@ def answer_endpoint(request: QueryRequest):
     start_time = time.time()
 
     try:
-        # 🛡️ GUARDRAIL 1: Input validation (generic, no domain check)
+        # GUARDRAIL 1: Input validation
         try:
             sanitized_query = validate_input(request.question)
             logger.info(f"Processing query: {sanitized_query[:100]}...")
@@ -79,7 +79,7 @@ def answer_endpoint(request: QueryRequest):
                 status_code=500, detail=f"Failed to generate answer: {str(e)}"
             )
 
-        # 🛡️ GUARDRAIL 2: Output validation (lenient mode - allows diagram references)
+        # GUARDRAIL 2: Output validation (lenient mode - allows diagram references)
         try:
             # Extract pages and media from result for validation
             pages = result.links

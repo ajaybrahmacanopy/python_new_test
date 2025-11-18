@@ -1,4 +1,4 @@
-"""Answer generation - copied exactly from RAG.py"""
+"""Answer generation with LLM"""
 
 import json
 import time
@@ -48,9 +48,6 @@ class AnswerGenerator:
     def __init__(self):
         self.client = Groq(timeout=API_TIMEOUT_MS / 1000)
 
-    # -----------------------------------------------------------
-    # Minimal hallucination guard - filters instead of failing
-    # -----------------------------------------------------------
     def _validate_references(self, output, pages, media_files):
         """
         Filter out references that aren't in the retrieved context.
@@ -68,9 +65,6 @@ class AnswerGenerator:
 
         return output
 
-    # -----------------------------------------------------------
-    # Core generation
-    # -----------------------------------------------------------
     def generate(self, query, context, pages, media_files):
         """Generate structured, validated answer."""
 
@@ -114,9 +108,7 @@ MEDIA:
                     raise RuntimeError(f"Groq API failed after retries: {e}")
                 time.sleep(2**attempt)
 
-        # -------------------------------------------------------
-        # JSON parsing (safe + simple)
-        # -------------------------------------------------------
+        # JSON parsing with fallback
         try:
             result = json.loads(response_text)
         except json.JSONDecodeError:

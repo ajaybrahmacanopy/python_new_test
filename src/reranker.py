@@ -1,4 +1,4 @@
-"""LLM-based reranker - copied exactly from RAG.py"""
+"""LLM-based passage reranking"""
 
 import json
 from groq import Groq

@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
       - name: Cache pip packages
         uses: actions/cache@v3
@@ -34,11 +34,11 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 src/ api.py main.py example.py --count --statistics
+          flake8 src/ api.py main.py tests/ --count --statistics
 
       - name: Check code formatting with black
         run: |
-          black --check src/ api.py main.py example.py
+          black --check src/ api.py main.py tests/
 
   test:
     name: Run Tests
@@ -50,7 +50,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
       - name: Install system dependencies
         run: |

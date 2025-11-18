@@ -1,4 +1,4 @@
-"""Pydantic models - copied exactly from RAG.py"""
+"""Pydantic data models"""
 
 from pydantic import BaseModel, Field
 from typing import List

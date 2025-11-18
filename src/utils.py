@@ -1,4 +1,4 @@
-"""Utility functions - copied exactly from RAG.py"""
+"""Utility functions for RAG system"""
 
 import re
 import tiktoken

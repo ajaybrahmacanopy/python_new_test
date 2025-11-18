@@ -1,4 +1,4 @@
-"""Vector store with hybrid retrieval - copied exactly from RAG.py"""
+"""Vector store with hybrid retrieval"""
 
 import os
 import pickle
@@ -21,9 +21,6 @@ class VectorStoreManager:
         self.pdf_processor = PDFProcessor()
         self.embeddings = OpenAIEmbeddings(model=EMBED_MODEL)
 
-    # -------------------------------------------------------
-    # 1️⃣ BUILD + SAVE FAISS + METADATA
-    # -------------------------------------------------------
     def build_and_save_index(self):
         print("Building chunks from PDF...")
         chunks = self.pdf_processor.build_chunks_from_pdf(PDF_PATH)
@@ -55,9 +52,6 @@ class VectorStoreManager:
 
         print("FAISS + metadata saved successfully.")
 
-    # -------------------------------------------------------
-    # 2️⃣ LOAD FAISS + METADATA
-    # -------------------------------------------------------
     def load_index_and_metadata(self):
         if not os.path.exists(INDEX_PATH):
             raise FileNotFoundError(f"FAISS index not found at {INDEX_PATH}")
@@ -76,9 +70,6 @@ class VectorStoreManager:
 
         return faiss_store, chunks
 
-    # -------------------------------------------------------
-    # 3️⃣ HYBRID (ENSEMBLE) RETRIEVAL
-    # -------------------------------------------------------
     def hybrid_search(self, query: str, top_k=5, candidate_k=20, use_reranker=True):
         """
         Hybrid FAISS + BM25 retrieval using LangChain's EnsembleRetriever + LLM reranker.
@@ -86,10 +77,7 @@ class VectorStoreManager:
 
         faiss_store, chunks = self.load_index_and_metadata()
 
-        # -----------------------
-        # 1. BUILD RETRIEVERS
-        # -----------------------
-
+        # Build retrievers
         faiss_retriever = faiss_store.as_retriever(
             search_type="similarity", search_kwargs={"k": candidate_k}
         )
@@ -119,9 +107,7 @@ class VectorStoreManager:
                 }
             )
 
-        # -----------------------
-        # 2. LLM RERANKING
-        # -----------------------
+        # Apply LLM reranking if enabled
         if use_reranker:
             reranker = LlamaReranker()
             ranking = reranker.score_passages(
@@ -136,7 +122,5 @@ class VectorStoreManager:
 
             return final
 
-        # -----------------------
-        # 3. NO RERANKER → RETURN TOP-K ENSEMBLE RESULTS
-        # -----------------------
+        # Return top-k ensemble results without reranking
         return results[:top_k]

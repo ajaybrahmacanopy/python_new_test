@@ -1,4 +1,4 @@
-"""PDF processing functions - copied exactly from RAG.py"""
+"""PDF processing and text extraction"""
 
 import os
 import uuid

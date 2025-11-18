@@ -1,4 +1,4 @@
-"""Simple end-to-end RAG pipeline - copied exactly from RAG.py"""
+"""End-to-end RAG pipeline"""
 
 from .logger import logger
 from .vector_store import VectorStoreManager
@@ -24,9 +24,6 @@ class SimpleRAG:
 
         logger.info("SimpleRAG initialized.")
 
-    # -----------------------------------------------------------
-    # RETRIEVAL + RERANKING
-    # -----------------------------------------------------------
     def retrieve(self, query: str):
         """Hybrid retrieval + LLM reranking -> top_k contexts."""
 
@@ -61,9 +58,6 @@ class SimpleRAG:
 
         return context, pages, images
 
-    # -----------------------------------------------------------
-    # GENERATE FINAL ANSWER
-    # -----------------------------------------------------------
     def answer(self, query: str):
         """Retrieve → Rerank → Generate structured answer."""
 

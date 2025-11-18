@@ -18,12 +18,12 @@ MEDIA_DIR = "static/media"
 
 # RAG Configuration
 # Chunking settings
-CHUNK_SIZE = 600  # characters (~150 tokens) - balances context and precision
-CHUNK_OVERLAP = 100  # characters (~25 tokens) - ensures continuity
+CHUNK_SIZE = 1000  # characters (~150 tokens) - balances context and precision
+CHUNK_OVERLAP = 150  # characters (~25 tokens) - ensures continuity
 
 # Retrieval settings
 TOP_K = 5  # final results after reranking
-CANDIDATE_K = 20  # initial FAISS candidates for reranking
+CANDIDATE_K = 30  # initial FAISS candidates for reranking
 
 # Embedding settings
 EMBED_MODEL = "text-embedding-3-small"  # cost-effective, high-quality

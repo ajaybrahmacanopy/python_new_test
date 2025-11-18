@@ -1,14 +1,15 @@
 """Answer generation - copied exactly from RAG.py"""
 
 import json
-import logging
 import time
+import logging
 from groq import Groq
 
 from .models import AnswerResponse
 from .config import TEMPERATURE, API_TIMEOUT_MS, API_MAX_RETRIES
 
 logger = logging.getLogger(__name__)
+
 
 SYSTEM_PROMPT = """
     You are an expert RAG answering assistant.
@@ -29,12 +30,13 @@ SYSTEM_PROMPT = """
     }
     }
 
-    Rules:
+    CRITICAL RULES:
     - Output JSON only, with no extra text.
     - All fields must be present.
-    - "links" must contain ONLY page identifiers (e.g. "/media/page_41.png").
-    - "media.images" must contain ONLY diagram/illustration file paths (not full-page images).
-    - Do not change the links and media values.
+    - "links" must contain ONLY pages from the provided PAGES list.
+    - "media.images" must contain ONLY diagrams from the provided MEDIA list.
+    - Do NOT invent or hallucinate page numbers or media files.
+    - Use ONLY the exact page and media references provided in the PAGES and MEDIA sections.
     - "steps" must be actionable.
     - "verification" must reference how the pages support the answer.
     - Use ONLY the provided context. No hallucinations.
@@ -44,80 +46,44 @@ SYSTEM_PROMPT = """
 
 
 class AnswerGenerator:
-    """Answer generation class"""
+    """Simple, clean answer generator for RAG."""
 
     def __init__(self):
-        try:
-            self.groq_client = Groq(
-                timeout=API_TIMEOUT_MS / 1000
-            )  # Convert ms to seconds
-            logger.info("AnswerGenerator initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize AnswerGenerator: {e}")
-            raise
+        self.client = Groq(timeout=API_TIMEOUT_MS / 1000)
 
-    def validate_answer_against_context(
-        self, model_output, context, pages, media_files
-    ):
+    # -----------------------------------------------------------
+    # Minimal hallucination guard - filters instead of failing
+    # -----------------------------------------------------------
+    def _validate_references(self, output, pages, media_files):
         """
-        Final hallucination guard:
-        Ensures the model output does not reference content not in context.
+        Filter out references that aren't in the retrieved context.
+        Returns cleaned output instead of raising errors.
         """
+        # Filter links to only include retrieved pages
+        valid_links = [p for p in output["links"] if p in pages]
 
-        # 1. Check page links
-        for p in model_output["links"]:
-            if p not in pages:
-                raise ValueError(f"Hallucinated page link: {p}")
+        # Filter media to only include retrieved diagrams
+        valid_media = [img for img in output["media"]["images"] if img in media_files]
 
-        # 2. Check images
-        for img in model_output["media"]["images"]:
-            if img not in media_files:
-                raise ValueError(f"Hallucinated image reference: {img}")
+        # Update output with filtered references
+        output["links"] = valid_links
+        output["media"]["images"] = valid_media
 
-        # 3. Ensure summary/steps contain only words from context
-        ctx_words = set(context.lower().split())
+        return output
 
-        def check_text(text):
-            for w in text.lower().split():
-                if w not in ctx_words:
-                    # Allow small stopword overlap
-                    if len(w) > 4:
-                        pass
+    # -----------------------------------------------------------
+    # Core generation
+    # -----------------------------------------------------------
+    def generate(self, query, context, pages, media_files):
+        """Generate structured, validated answer."""
 
-        check_text(model_output["answer"]["summary"])
-        for step in model_output["answer"]["steps"]:
-            check_text(step)
+        if not query.strip():
+            raise ValueError("Query cannot be empty")
 
-        return model_output
+        if not context.strip():
+            raise ValueError("Context cannot be empty")
 
-    def generate_structured_answer(self, query, context, pages, media_files):
-        """
-        Generate structured answer using Groq LLM.
-
-        Args:
-            query: User question
-            context: Retrieved context text
-            pages: List of page references
-            media_files: List of media file references
-
-        Returns:
-            AnswerResponse object
-
-        Raises:
-            ValueError: If inputs are invalid
-            Exception: If answer generation fails
-        """
-        try:
-            # Validate inputs
-            if not query or not query.strip():
-                raise ValueError("Query cannot be empty")
-
-            if not context or not context.strip():
-                raise ValueError("Context cannot be empty")
-
-            logger.info(f"Generating answer for query: {query[:100]}...")
-
-            user_prompt = f"""
+        user_prompt = f"""
 QUESTION:
 {query}
 
@@ -131,73 +97,41 @@ MEDIA:
 {media_files}
 """
 
-            # Call Groq API with retry logic
-            completion = None
-            last_error = None
-
-            for attempt in range(API_MAX_RETRIES + 1):
-                try:
-                    completion = self.groq_client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        temperature=TEMPERATURE,
-                        messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                    )
-                    break  # Success, exit retry loop
-
-                except Exception as e:
-                    last_error = e
-                    if attempt < API_MAX_RETRIES:
-                        wait_time = 2**attempt  # Exponential backoff: 1s, 2s
-                        logger.warning(
-                            f"Groq API call failed "
-                            f"(attempt {attempt + 1}/{API_MAX_RETRIES + 1}): {e}. "
-                            f"Retrying in {wait_time}s..."
-                        )
-                        time.sleep(wait_time)
-                    else:
-                        logger.error(
-                            f"Groq API call failed after {API_MAX_RETRIES + 1} attempts: {e}"
-                        )
-                        raise Exception(f"Failed to call Groq API: {str(last_error)}")
-
-            raw_output = completion.choices[0].message.content
-            logger.debug(f"Raw LLM output: {raw_output[:200]}...")
-
-            # Parse JSON safely
+        # Retry loop (simple & robust)
+        response_text = None
+        for attempt in range(API_MAX_RETRIES + 1):
             try:
-                json_output = json.loads(raw_output)
-            except json.JSONDecodeError as e:
-                logger.warning(f"Initial JSON parse failed: {e}, trying fallback")
-                try:
-                    # If LLM adds stray characters, extract JSON using a regex fallback
-                    cleaned = raw_output[
-                        raw_output.find("{") : raw_output.rfind("}") + 1
-                    ]
-                    json_output = json.loads(cleaned)
-                    logger.info("Fallback JSON parsing succeeded")
-                except json.JSONDecodeError as e2:
-                    logger.error(f"Fallback JSON parse also failed: {e2}")
-                    raise Exception(f"Failed to parse LLM output as JSON: {str(e2)}")
+                resp = self.client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    temperature=TEMPERATURE,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                )
+                response_text = resp.choices[0].message.content
+                break
 
-            # Validate with Pydantic
-            try:
-                validated = AnswerResponse(**json_output)
             except Exception as e:
-                logger.error(f"Pydantic validation failed: {e}")
-                raise Exception(f"Invalid answer structure: {str(e)}")
+                if attempt == API_MAX_RETRIES:
+                    raise RuntimeError(f"Groq API failed after retries: {e}")
+                time.sleep(2**attempt)
 
-            # 🔥 Final hallucination fix: check references + content
-            # final = self.validate_answer_against_context(
-            #     validated.model_dump(), context, pages, media_files
-            # )
+        # -------------------------------------------------------
+        # JSON parsing (safe + simple)
+        # -------------------------------------------------------
+        try:
+            result = json.loads(response_text)
+        except json.JSONDecodeError:
+            cleaned = response_text[
+                response_text.find("{") : response_text.rfind("}") + 1
+            ]
+            result = json.loads(cleaned)
 
-            logger.info("Answer generated successfully")
-            return validated
+        # Filter out hallucinated references
+        cleaned_result = self._validate_references(result, pages, media_files)
 
-        except Exception as e:
-            logger.error(f"Answer generation failed: {e}")
-            raise
-        # return AnswerResponse(**final)
+        # Pydantic validation with cleaned references
+        validated = AnswerResponse(**cleaned_result)
+
+        return validated

@@ -1,6 +1,6 @@
 """Pydantic models - copied exactly from RAG.py"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 
@@ -21,3 +21,12 @@ class AnswerResponse(BaseModel):
     links: List[str]
     media: Media
     latency_ms: int = 0
+
+
+class PassageScore(BaseModel):
+    id: int = Field(..., description="Index of the passage")
+    score: float = Field(..., description="Relevance score 0–1")
+
+
+class RerankResult(BaseModel):
+    results: List[PassageScore]

@@ -8,8 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from src import (
-    Retriever,
-    AnswerGenerator,
+    SimpleRAG,
     GuardrailViolation,
     validate_input,
     validate_output,
@@ -33,13 +32,12 @@ try:
 except Exception as e:
     logger.warning(f"Failed to mount media directory: {e}")
 
-# Initialize classes
+# Initialize SimpleRAG
 try:
-    retriever = Retriever()
-    generator = AnswerGenerator()
-    logger.info("Retriever and Generator initialized successfully")
+    rag = SimpleRAG(top_k=5, candidate_k=25)
+    logger.info("SimpleRAG initialized successfully")
 except Exception as e:
-    logger.error(f"Failed to initialize components: {e}")
+    logger.error(f"Failed to initialize SimpleRAG: {e}")
     raise
 
 
@@ -78,61 +76,20 @@ def answer_endpoint(request: QueryRequest):
             logger.warning(f"Input guardrail violation: {e}")
             raise HTTPException(status_code=400, detail=str(e))
 
-        # Retrieve and rerank
-        retrieval_start = time.time()
+        # Use SimpleRAG for end-to-end processing
         try:
-            context, pages, media_files = retriever.retrieve_with_reranking(
-                sanitized_query
-            )
+            result = rag.answer(sanitized_query)
         except Exception as e:
-            logger.error(f"Retrieval failed: {e}")
-            raise HTTPException(
-                status_code=500, detail=f"Failed to retrieve context: {str(e)}"
-            )
-        retrieval_time = (time.time() - retrieval_start) * 1000  # Convert to ms
-
-        # Check if no relevant context found
-        if context is None:
-            total_latency = int((time.time() - start_time) * 1000)
-            logger.info(
-                f"No relevant context found - "
-                f"Retrieval: {retrieval_time:.2f}ms, Total: {total_latency}ms"
-            )
-            return AnswerResponse(
-                mode="answer",
-                answer=AnswerContent(
-                    title="No Information Found",
-                    summary="No relevant information found in the document for your query.",
-                    steps=["Try rephrasing your question", "Use different keywords"],
-                    verification=["Retrieved content was not relevant to the query"],
-                ),
-                links=[],
-                media=Media(images=[]),
-                latency_ms=total_latency,
-            )
-
-        # 🛡️ GUARDRAIL 2: Context validation
-        try:
-            validate_context(context)
-        except GuardrailViolation as e:
-            logger.warning(f"Context guardrail violation: {e}")
-            # Don't fail, just log - proceed with generation
-
-        # Generate answer
-        generation_start = time.time()
-        try:
-            result = generator.generate_structured_answer(
-                sanitized_query, context, pages, media_files
-            )
-        except Exception as e:
-            logger.error(f"Answer generation failed: {e}")
+            logger.error(f"RAG processing failed: {e}")
             raise HTTPException(
                 status_code=500, detail=f"Failed to generate answer: {str(e)}"
             )
-        generation_time = (time.time() - generation_start) * 1000  # Convert to ms
 
-        # 🛡️ GUARDRAIL 3: Output validation (lenient mode - allows diagram references)
+        # 🛡️ GUARDRAIL 2: Output validation (lenient mode - allows diagram references)
         try:
+            # Extract pages and media from result for validation
+            pages = result.links
+            media_files = result.media.images
             validate_output(result.model_dump(), pages, media_files, strict=False)
         except GuardrailViolation as e:
             logger.error(f"Output guardrail violation: {e}")
@@ -143,11 +100,8 @@ def answer_endpoint(request: QueryRequest):
         # Calculate total latency
         total_latency = int((time.time() - start_time) * 1000)
 
-        # Log timing breakdown
-        logger.info(
-            f"Request completed - Retrieval: {retrieval_time:.2f}ms, "
-            f"Generation: {generation_time:.2f}ms, Total: {total_latency}ms"
-        )
+        # Log timing
+        logger.info(f"Request completed - Total: {total_latency}ms")
 
         # Add latency to response
         result.latency_ms = total_latency

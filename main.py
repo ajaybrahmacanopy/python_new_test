@@ -7,7 +7,7 @@ import os
 import sys
 import logging
 import fitz
-from src import INDEX_PATH, META_PATH, EmbeddingManager
+from src import INDEX_PATH, META_PATH, VectorStoreManager
 from src.pdf_processor import PDFProcessor
 from src.config import PDF_PATH, MEDIA_DIR
 
@@ -55,8 +55,8 @@ def ensure_images_generated():
 
 if __name__ == "__main__":
     try:
-        logger.info("Initializing EmbeddingManager...")
-        embedding_manager = EmbeddingManager()
+        logger.info("Initializing VectorStoreManager...")
+        vector_store = VectorStoreManager()
 
         # Build the index if it doesn't exist
         if not os.path.exists(INDEX_PATH) or not os.path.exists(META_PATH):
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             logger.info("Starting index build...")
 
             try:
-                embedding_manager.build_and_save_index()
+                vector_store.build_and_save_index()
                 print("✅ Index built successfully!")
                 logger.info("Index build completed successfully")
             except FileNotFoundError as e:

@@ -4,63 +4,44 @@ Example usage of the RAG system - CLI test
 """
 
 import os
-from src import (
-    INDEX_PATH,
-    META_PATH,
-    EmbeddingManager,
-    Retriever,
-    AnswerGenerator,
-)
+import json
+from src import INDEX_PATH, META_PATH, VectorStoreManager, SimpleRAG
 
 
 def main():
     # Initialize classes
-    embedding_manager = EmbeddingManager()
-    retriever = Retriever()
-    generator = AnswerGenerator()
+    vector_store = VectorStoreManager()
 
     # 1st run: build the index if needed
     if not os.path.exists(INDEX_PATH) or not os.path.exists(META_PATH):
         print("Building index first...")
-        embedding_manager.build_and_save_index()
+        vector_store.build_and_save_index()
 
     # Example query
     q = "How do I handle wayfinding signage for blocks of flats?"
     print(f"\nQuery: {q}\n")
 
-    # Test 1: Search
+    # Test 1: Hybrid Search Results
     print("=" * 80)
-    print("TEST 1: FAISS Search Results")
+    print("TEST 1: Hybrid FAISS + BM25 Search Results")
     print("=" * 80)
-    hits = embedding_manager.search(q, top_k=5)
-    print("\nTop chunks:\n")
-    for r in hits:
-        print(f"- Rank {r['rank']} (page {r['page']}, dist {r['distance']:.4f})")
+    hits = vector_store.hybrid_search(q, top_k=5, candidate_k=20, use_reranker=True)
+    print(f"\nTop {len(hits)} chunks:\n")
+    for i, r in enumerate(hits, 1):
+        print(f"- Rank {i} (page {r['page']})")
         print(r["text"][:400], "...\n")
         print("media:", r["media"])
         print("diagrams:", r["diagram_ids"])
         print("is_table:", r["is_table"])
         print("-" * 80)
 
-    # Test 2: Retrieve with reranking
+    # Test 2: Simple RAG end-to-end
     print("\n" + "=" * 80)
-    print("TEST 2: Retrieve with Reranking")
+    print("TEST 2: SimpleRAG End-to-End")
     print("=" * 80)
-    context, pages, media_files = retriever.retrieve_with_reranking(q)
-
-    if context is None:
-        print("❌ No relevant context found")
-        return
-
-    print(f"\nContext length: {len(context)} chars")
-    print(f"Pages: {pages}")
-    print(f"Media files: {media_files}")
-
-    # Test 3: Generate answer
-    print("\n" + "=" * 80)
-    print("TEST 3: Generate Structured Answer")
-    print("=" * 80)
-    result = generator.generate_structured_answer(q, context, pages, media_files)
+    
+    rag = SimpleRAG(top_k=5, candidate_k=25)
+    result = rag.answer(q)
 
     print("\n📋 Generated Answer:")
     print(f"\nTitle: {result.answer.title}")
@@ -73,6 +54,12 @@ def main():
         print(f"  - {v}")
     print(f"\nLinks: {result.links}")
     print(f"Media: {result.media.images}")
+
+    # Test 3: JSON output
+    print("\n" + "=" * 80)
+    print("TEST 3: JSON Output")
+    print("=" * 80)
+    print(json.dumps(result.model_dump(), indent=2))
 
     print("\n" + "=" * 80)
     print("✅ All tests completed!")

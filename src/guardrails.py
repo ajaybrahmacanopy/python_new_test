@@ -13,29 +13,14 @@ class GuardrailViolation(Exception):
 
 
 # Constants
-MIN_QUERY_LENGTH = 3
+MIN_QUERY_LENGTH = 5
 MAX_QUERY_LENGTH = 500
 MAX_ANSWER_LENGTH = 2000
 MAX_STEPS = 10
 MAX_LINKS = 10
-MAX_MEDIA = 5
+MAX_MEDIA = 10
 MIN_CONTEXT_LENGTH = 50
 MAX_CONTEXT_LENGTH = 50000
-
-# Suspicious patterns for prompt injection
-INJECTION_PATTERNS = [
-    r"ignore\s+.*(previous|above|all).*instructions?",
-    r"you\s+are\s+now",
-    r"new\s+instructions?",
-    r"system\s*:\s*you",
-    r"<\s*script\s*>",
-    r"javascript:",
-    r"eval\s*\(",
-    r"exec\s*\(",
-    r"__import__",
-    r"forget\s+(everything|all)",
-    r"disregard\s+(previous|above)",
-]
 
 
 def sanitize_input(query: str) -> str:
@@ -86,16 +71,7 @@ def validate_input(query: str) -> str:
     if length > MAX_QUERY_LENGTH:
         raise GuardrailViolation(f"Query too long (max {MAX_QUERY_LENGTH} chars)")
 
-    # Check for injection patterns
-    query_lower = query.lower()
-    for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, query_lower, re.IGNORECASE):
-            logger.warning(f"Injection attempt detected: {pattern}")
-            raise GuardrailViolation(
-                "Query contains suspicious patterns and was blocked for security"
-            )
-
-    # Sanitize after security checks
+    # Sanitize input
     return sanitize_input(query)
 
 

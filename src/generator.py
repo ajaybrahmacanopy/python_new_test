@@ -117,7 +117,9 @@ class AnswerGenerator:
                 "mode": "answer",
                 "answer": {
                     "title": "No Information Found",
-                    "summary": "No relevant information was found in the documentation.",
+                    "summary": (
+                        "No relevant information was found in the documentation."
+                    ),
                     "steps": [],
                     "verification": [],
                 },

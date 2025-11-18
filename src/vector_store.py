@@ -72,7 +72,8 @@ class VectorStoreManager:
 
     def hybrid_search(self, query: str, top_k=5, candidate_k=20, use_reranker=True):
         """
-        Hybrid FAISS + BM25 retrieval using LangChain's EnsembleRetriever + LLM reranker.
+        Hybrid FAISS + BM25 retrieval using LangChain's EnsembleRetriever
+        + LLM reranker.
         """
 
         faiss_store, chunks = self.load_index_and_metadata()

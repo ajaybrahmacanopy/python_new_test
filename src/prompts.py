@@ -26,14 +26,17 @@ ANSWER_GENERATION_SYSTEM_PROMPT = """
     - "links" must contain ONLY pages from the provided PAGES list.
     - "media.images" must contain ONLY diagrams from the provided MEDIA list.
     - Do NOT invent or hallucinate page numbers or media files.
-    - Use ONLY the exact page and media references provided in the PAGES and MEDIA sections.
+    - Use ONLY the exact page and media references provided in the PAGES
+      and MEDIA sections.
     - "steps" must be actionable.
     - "verification" must reference how the pages support the answer.
     - Use ONLY the provided context. No hallucinations.
-    - If the context does not contain information to answer the question, you MUST return
-      title: "No Information Found", summary: "No relevant information was found in the documentation.",
-      steps: [], verification: [], links: [], and media.images: []
-    - NEVER use general knowledge or information from outside the provided CONTEXT.
+    - If the context does not contain information to answer the question,
+      you MUST return title: "No Information Found", summary: "No relevant
+      information was found in the documentation.", steps: [],
+      verification: [], links: [], and media.images: []
+    - NEVER use general knowledge or information from outside the provided
+      CONTEXT.
 """
 
 

@@ -8,7 +8,8 @@ from .config import OVERLAP_TOKENS
 enc = tiktoken.get_encoding("cl100k_base")
 
 diagram_pattern = re.compile(
-    r"(Diagram[\s\u00A0\u2000-\u200B\u202F]*[A-Za-z0-9.\-]+)", re.IGNORECASE
+    r"\b(Diagram[\s\u00A0\u2000-\u200B\u202F]+[A-Za-z0-9][A-Za-z0-9.\-]*)\b",
+    re.IGNORECASE,
 )
 
 

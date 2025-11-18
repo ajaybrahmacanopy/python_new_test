@@ -4,6 +4,7 @@ from .logger import logger
 from .vector_store import VectorStoreManager
 from .reranker import LlamaReranker
 from .generator import AnswerGenerator
+from .guardrails import validate_context
 
 
 class SimpleRAG:
@@ -70,9 +71,12 @@ class SimpleRAG:
 
         context, pages, media_files = self.retrieve(query)
 
+        # Sanitize context with Ammonia (nh3) to remove HTML/XSS
+        sanitized_context = validate_context(context)
+
         answer = self.generator.generate(
             query=query,
-            context=context,
+            context=sanitized_context,
             pages=pages,
             media_files=media_files,
         )

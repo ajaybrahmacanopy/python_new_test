@@ -2,6 +2,7 @@
 
 import re
 from typing import List
+import nh3
 from .logger import logger
 
 
@@ -39,22 +40,22 @@ INJECTION_PATTERNS = [
 
 def sanitize_input(query: str) -> str:
     """
-    Sanitize and normalize input query.
+    Sanitize and normalize input query using Ammonia (nh3).
 
     Removes:
+    - HTML/XSS attacks
     - Excessive whitespace
     - Control characters
-    - HTML tags
     - Special characters
     """
+    # Sanitize HTML with Ammonia - strip ALL tags for input queries
+    query = nh3.clean(query, tags=set())
+
     # Remove excessive whitespace
     query = " ".join(query.split())
 
     # Remove control characters
     query = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", query)
-
-    # Remove HTML tags
-    query = re.sub(r"<[^>]+>", "", query)
 
     # Remove special characters that could be injection attempts
     query = re.sub(r"[{}[\]\\]", "", query)
@@ -170,12 +171,15 @@ def validate_output(
             raise GuardrailViolation(f"Invalid media reference: {img}")
 
 
-def validate_context(context: str) -> None:
+def validate_context(context: str) -> str:
     """
-    Validate retrieved context.
+    Validate and sanitize retrieved context using Ammonia (nh3).
 
     Args:
         context: Retrieved context string
+
+    Returns:
+        Sanitized context string
 
     Raises:
         GuardrailViolation: If context is invalid
@@ -188,3 +192,9 @@ def validate_context(context: str) -> None:
         logger.warning(f"Context very short: {length} chars")
     if length > MAX_CONTEXT_LENGTH:
         raise GuardrailViolation(f"Context too long (max {MAX_CONTEXT_LENGTH} chars)")
+
+    # Sanitize HTML/XSS with Ammonia
+    sanitized = nh3.clean(context)
+    logger.debug(f"Context sanitized: {len(context)} -> {len(sanitized)} chars")
+
+    return sanitized

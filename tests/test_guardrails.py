@@ -218,7 +218,8 @@ class TestContextGuardrails:
     def test_valid_context(self):
         """Test valid context passes"""
         context = "Regulations require proper exits and signage." * 10
-        validate_context(context)
+        result = validate_context(context)
+        assert result == context  # Should return sanitized context
 
     def test_empty_context_rejected(self):
         """Test empty context is rejected"""
@@ -264,4 +265,6 @@ class TestMainFunctions:
     def test_validate_context_function(self):
         """Test validate_context main function"""
         context = "Context text here" * 10
-        validate_context(context)
+        result = validate_context(context)
+        assert result  # Should return sanitized context
+        assert isinstance(result, str)

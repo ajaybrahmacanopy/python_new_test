@@ -1,12 +1,10 @@
 """LLM-based reranker - copied exactly from RAG.py"""
 
 import json
-import logging
 from groq import Groq
 
+from .logger import logger
 from .models import RerankResult
-
-logger = logging.getLogger(__name__)
 
 
 class LlamaReranker:

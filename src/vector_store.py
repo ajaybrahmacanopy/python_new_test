@@ -2,7 +2,6 @@
 
 import os
 import pickle
-import logging
 from typing import List, Dict, Any
 
 from langchain_community.vectorstores import FAISS
@@ -11,11 +10,10 @@ from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
 
+from .logger import logger
 from .config import EMBED_MODEL, INDEX_PATH, META_PATH, PDF_PATH
 from .pdf_processor import PDFProcessor
 from .reranker import LlamaReranker
-
-logger = logging.getLogger(__name__)
 
 
 class VectorStoreManager:

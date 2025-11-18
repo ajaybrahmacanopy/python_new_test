@@ -29,6 +29,10 @@ data/
 *.index
 *.pkl
 
+# Logs
+logs/
+*.log
+
 # Media files (too large)
 static/media/*.png
 static/media/*.jpeg

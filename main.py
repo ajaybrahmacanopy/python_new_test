@@ -5,17 +5,11 @@ Build FAISS index from PDF
 
 import os
 import sys
-import logging
 import fitz
+from src.logger import logger
 from src import INDEX_PATH, META_PATH, VectorStoreManager
 from src.pdf_processor import PDFProcessor
 from src.config import PDF_PATH, MEDIA_DIR
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 
 def ensure_images_generated():

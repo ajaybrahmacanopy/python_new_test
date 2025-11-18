@@ -2,11 +2,11 @@
 FastAPI application for RAG system
 """
 
-import logging
 import time
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from src.logger import logger
 from src import (
     SimpleRAG,
     GuardrailViolation,
@@ -16,12 +16,6 @@ from src import (
 )
 from src.models import AnswerResponse, AnswerContent, Media
 from src.config import MEDIA_DIR
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 app = FastAPI(title="RAG System API", version="1.0.0")
 

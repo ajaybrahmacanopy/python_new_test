@@ -1,12 +1,9 @@
 """Simple end-to-end RAG pipeline - copied exactly from RAG.py"""
 
-import logging
-
+from .logger import logger
 from .vector_store import VectorStoreManager
 from .reranker import LlamaReranker
 from .generator import AnswerGenerator
-
-logger = logging.getLogger(__name__)
 
 
 class SimpleRAG:

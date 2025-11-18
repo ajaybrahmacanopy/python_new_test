@@ -37,9 +37,8 @@ class PDFProcessor:
         out_path = os.path.join(MEDIA_DIR, filename)
 
         if not os.path.exists(out_path):
-            import logging
+            from .logger import logger
 
-            logger = logging.getLogger(__name__)
             logger.info(f"Generating missing image: {filename}")
 
             with fitz.open(PDF_PATH) as doc:
@@ -57,9 +56,7 @@ class PDFProcessor:
         Args:
             media_paths: List of media paths (e.g., ["/media/page_1.png", ...])
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
+        from .logger import logger
 
         processor = PDFProcessor()
 

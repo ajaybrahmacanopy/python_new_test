@@ -2,13 +2,11 @@
 
 import json
 import time
-import logging
 from groq import Groq
 
+from .logger import logger
 from .models import AnswerResponse
 from .config import TEMPERATURE, API_TIMEOUT_MS, API_MAX_RETRIES
-
-logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = """

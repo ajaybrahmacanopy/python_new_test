@@ -1,5 +1,6 @@
 """RAG System Package"""
 
+from .logger import logger
 from .config import PDF_PATH, MEDIA_DIR, INDEX_PATH, META_PATH
 from .models import AnswerResponse, AnswerContent, Media, PassageScore, RerankResult
 from .generator import AnswerGenerator
@@ -19,6 +20,7 @@ from .guardrails import (
 )
 
 __all__ = [
+    "logger",
     "PDF_PATH",
     "MEDIA_DIR",
     "INDEX_PATH",

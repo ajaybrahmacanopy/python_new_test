@@ -1,3 +1,41 @@
+# Environment variables and secrets
 .env
-.pynb_checkpoints/
+*.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Data files
+data/
+*.index
+*.pkl
+
+# Media files (too large)
+static/media/*.png
+static/media/*.jpeg
+static/media/*.jpg
+
+# Backup files
 back_up/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -20,18 +20,23 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY src/ ./src/
 COPY api.py .
+COPY main.py .
+COPY startup.sh .
 COPY content/ ./content/
 
 # Create directories for data and media
 RUN mkdir -p data static/media
 
+# Make startup script executable
+RUN chmod +x startup.sh
+
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# Health check (increased start period for index building)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
-# Run the application
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run startup script (builds index if needed, then starts API)
+CMD ["./startup.sh"]
 

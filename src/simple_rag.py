@@ -31,6 +31,20 @@ class SimpleRAG:
         # 1. Get FAISS + BM25 candidates
         faiss_store, chunks = self.store.load_index_and_metadata()
 
+        # Build page-to-diagrams mapping from ALL chunks
+        page_diagram_map = {}
+        for chunk in chunks:
+            page = chunk.get("page")
+            diagrams = chunk.get("diagram_ids", [])
+            if page not in page_diagram_map:
+                page_diagram_map[page] = set()
+            page_diagram_map[page].update(diagrams)
+
+        # Convert sets to sorted lists
+        page_diagram_map = {
+            page: sorted(list(diagrams)) for page, diagrams in page_diagram_map.items()
+        }
+
         # Get ensemble results
         results = self.store.hybrid_search(
             query=query,
@@ -53,9 +67,25 @@ class SimpleRAG:
         # Prepare context text
         context = "\n\n---\n\n".join(f["text"] for f in final)
 
-        # Gather media + pages
+        # Gather unique pages from final results
+        unique_pages = list({f["page"] for f in final})
+
+        # Gather media (page images)
         pages = list({m for f in final for m in f["media"]})
-        images = list({img for f in final for img in f["diagram_ids"]})
+
+        # Get ALL diagrams for the unique pages using page_diagram_map
+        all_diagrams = []
+        for page in unique_pages:
+            if page in page_diagram_map and page_diagram_map[page]:
+                all_diagrams.extend(page_diagram_map[page])
+
+        # Remove duplicates and sort
+        images = sorted(list(set(all_diagrams)))
+
+        # Safety: Limit to max 25 diagrams to avoid overwhelming the LLM
+        if len(images) > 25:
+            logger.warning(f"Too many diagrams ({len(images)}), limiting to 25")
+            images = images[:25]
 
         return context, pages, images
 
